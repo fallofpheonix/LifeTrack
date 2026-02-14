@@ -1,13 +1,5 @@
 # LifeTrack: Revolutionizing Physical Health Management
 
-## Team Members
-- **Member 1**: Dr. Gaurav Soni, SCOPE, VIT Bhopal University, Kothri, India, gaurav.soni@vitbhopal.ac.in
-- **Member 2**: Ishita Gautam, SCOPE, VIT Bhopal University, Kothri, India, ishita.23bce11316@vitbhopal.ac.in
-- **Member 3**: Ujjwal Singh, SCOPE, VIT Bhopal University, Kothri, India, ujjwal.23bce10578@vitbhopal.ac.in
-- **Member 4**: Prince Negi, SCOPE, VIT Bhopal University, Kothri, India, prince.23bce10687@vitbhopal.ac.in
-- **Member 5**: Priyanshu, SCOPE, VIT Bhopal University, Kothri, India, priyanshu.23bce10601@vitbhopal.ac.in
-- **Member 6**: Vanshika Khatri, SCOPE, VIT Bhopal University, Kothri, India, vanshika.23bce10465@vitbhopal.ac.in
-
 ## Abstract
 LifeTrack is a mobile health application designed to support personalized wellness management through fitness tracking, nutrition guidance, disease awareness, reminders, and progress analytics. The app supports both manual logging and future wearable integration to improve consistency in health monitoring. By combining personalized plans, records, and social motivation concepts, LifeTrack aims to improve physical activity, nutrition adherence, and long-term healthy behavior formation, especially for users managing chronic conditions such as diabetes.
 
