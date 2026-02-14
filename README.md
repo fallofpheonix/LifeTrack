@@ -125,13 +125,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 
-## 📚 References
-
-1. Brown, J. (2020). *Health and Wellness in the Digital Age* (2nd ed.). HealthTech Publishing.
-2. Smith, J. A., & Harris, L. M. (2019). The Impact of Mobile Health Apps on User Behavior and Health Outcomes. *Journal of Health Informatics, 12*(3), 234-246.
-3. Williams, D. F., & Lee, H. R. (2022). *Innovations in Health Technology: From Wearables to Mobile Apps*. FutureHealth Press.
-4. Wikipedia contributors. (2024). Health App. Retrieved from https://en.wikipedia.org/wiki/Health_app
-
----
-
 <p align="center">Made with ❤️ for better health management</p>
