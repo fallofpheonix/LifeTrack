@@ -1,128 +1,94 @@
 # LifeTrack
 
-> A personalized, privacy-first mobile health companion for daily wellness and chronic condition management.
+> Revolutionising Physical Health Management with a personalized, privacy-first approach.
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.10.8-02569B?logo=flutter)](https://flutter.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
----
+## Overview
 
-## 📋 Overview
+**LifeTrack** is a mobile health companion designed to empower users in managing their daily wellness and chronic conditions. By combining activity tracking, nutritional logging, and medical record-keeping into a single, cohesive interface, LifeTrack helps users build healthier habits and monitor their recovery progress.
 
-**LifeTrack** is a comprehensive mobile health application that empowers users to take control of their wellness journey. By seamlessly integrating activity tracking, nutritional logging, and medical record-keeping, LifeTrack helps you build healthier habits and monitor your progress—whether you're managing chronic conditions like diabetes and hypertension or simply working towards a healthier lifestyle.
+Whether you are managing diabetes, hypertension, or just aiming for a healthier lifestyle, LifeTrack provides the tools you need to stay on top of your health.
 
----
+## Key Features
 
-## ✨ Key Features
+### 📊 Dashboard
+Your daily health at a glance. Visualise key metrics instantly:
+- **Steps**: Track your daily movement.
+- **Hydration**: Log water intake with a simple tap.
+- **Sleep**: Monitor your rest patterns.
+- **Calories**: Keep an eye on your energy balance.
 
-### 📊 **Dashboard**
-Your daily health overview at a glance:
-- **Steps Tracker** - Monitor your daily movement
-- **Hydration Logger** - Simple tap to log water intake
-- **Sleep Monitor** - Track your rest patterns
-- **Calorie Counter** - Keep tabs on your energy balance
+### 🏃 Activity & Nutrition
+- **Quick Logging**: Easily add exercises and meals.
+- **Calorie Tracking**: Input calorie counts for accurate daily totals.
+- **History**: Review past activities to stay motivated.
 
-### 🏃 **Activity & Nutrition**
-Complete fitness and diet management:
-- Quick logging for exercises and meals
-- Accurate calorie tracking with daily totals
-- Historical data to keep you motivated
+### 🏥 Medical Hub
+A dedicated space for managing chronic conditions:
+- **Disease Guide**: Access educational information on symptoms and precautions for various conditions.
+- **Health Records**: Securely store dated records of your condition, vitals, and notes.
+- **Recovery Graph**: Visualize your health trends (e.g., Fasting vs. Post-Meal Glucose) to see your progress over time.
 
-### 🏥 **Medical Hub**
-Comprehensive chronic condition management:
-- **Disease Guide** - Educational resources on symptoms and precautions
-- **Health Records** - Secure storage for vitals, conditions, and notes
-- **Recovery Graphs** - Visual trends (e.g., glucose levels over time)
+### ⏰ Smart Reminders
+Never miss a beat with customizable alerts:
+- **Medication**: Timely reminders to take your medicine.
+- **Hydration**: Nudges to drink water throughout the day.
+- **Routine**: Alerts for exercise or other health-related activities.
 
-### ⏰ **Smart Reminders**
-Never miss important health tasks:
-- Medication reminders
-- Hydration alerts throughout the day
-- Exercise and routine notifications
+### 🔒 Privacy Focused
+- **Local Storage**: All your health data is stored locally on your device using `shared_preferences`.
+- **No Cloud Sync (MVP)**: Your data stays with you.
 
-### 🔒 **Privacy Focused**
-Your health data stays with you:
-- Local-only storage using `shared_preferences`
-- No cloud sync in MVP version
-- Complete data privacy
+## Tech Stack
 
----
+- **Framework**: [Flutter](https://flutter.dev/) (Dart)
+- **State Management**: `setState` (MVP Architecture) / Modular Widgets
+- **Local Storage**: `shared_preferences`
+- **Architecture**: Domain-driven feature separation.
 
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| **Framework** | [Flutter](https://flutter.dev/) (Dart) |
-| **State Management** | `setState` with Modular Widgets |
-| **Local Storage** | `shared_preferences` |
-| **Architecture** | Domain-driven feature separation |
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-
-Ensure you have the following installed:
 - **Flutter SDK**: `^3.10.8`
-- **Dart SDK**: Compatible with Flutter version
-- **IDE**: Android Studio, VS Code, or IntelliJ
+- **Dart SDK**: Compatible with Flutter version.
+- **IDE**: Android Studio / VS Code / IntelliJ.
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/fallofpheonix/LifeTrack.git
-   cd LifeTrack
-   ```
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/fallofpheonix/LifeTrack.git
+    cd LifeTrack
+    ```
 
-2. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
+2.  **Install dependencies**:
+    ```bash
+    flutter pub get
+    ```
 
-3. **Run the application**
-   ```bash
-   flutter run
-   ```
+3.  **Run the app**:
+    ```bash
+    flutter run
+    ```
 
----
+## Project Structure
 
-## 📁 Project Structure
+The project follows a clean, feature-based directory structure (within `lib/`):
 
-The project follows a clean, feature-based architecture within the `lib/` directory:
+- **`main.dart`**: Entry point and core app logic.
+- **`DashboardPage`**: Main overview screen.
+- **`ActivityPage`**: Activity logging and history.
+- **`NutritionPage`**: Meal and calorie tracking.
+- **`MedicalPage`**: Disease guide and health records.
+- **`ReminderPage`**: Reminder settings and management.
 
-```
-lib/
-├── main.dart           # Application entry point
-├── DashboardPage       # Main health overview screen
-├── ActivityPage        # Activity logging and history
-├── NutritionPage       # Meal and calorie tracking
-├── MedicalPage         # Disease guide and health records
-└── ReminderPage        # Reminder settings and management
-```
+## Contributing
 
----
+Contributions are welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
 
-## 🤝 Contributing
+## License
 
-We welcome contributions from the community! 
-
-To get started:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on our code of conduct and the pull request process.
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for complete details.
-
----
-
-<p align="center">Made with ❤️ for better health management</p>
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
