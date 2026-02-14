@@ -84,19 +84,6 @@ The project follows a clean, feature-based directory structure (within `lib/`):
 - **`MedicalPage`**: Disease guide and health records.
 - **`ReminderPage`**: Reminder settings and management.
 
-## Team
-
-This project was developed by a dedicated team from **SCOPE, VIT Bhopal University**.
-
-| Name | Role / Affiliation | Email |
-| :--- | :--- | :--- |
-| **Dr. Gaurav Soni** | Mentor / SCOPE | gaurav.soni@vitbhopal.ac.in |
-| **Ishita Gautam** | Member / SCOPE | ishita.23bce11316@vitbhopal.ac.in |
-| **Ujjwal Singh** | Member / SCOPE | ujjwal.23bce10578@vitbhopal.ac.in |
-| **Prince Negi** | Member / SCOPE | prince.23bce10687@vitbhopal.ac.in |
-| **Priyanshu** | Member / SCOPE | priyanshu.23bce10601@vitbhopal.ac.in |
-| **Vanshika Khatri** | Member / SCOPE | vanshika.23bce10465@vitbhopal.ac.in |
-
 ## Contributing
 
 Contributions are welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
