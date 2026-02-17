@@ -1,4 +1,4 @@
-package com.example.lifetrack
+package com.fallofpheonix.lifetrack
 
 import io.flutter.embedding.android.FlutterActivity
 

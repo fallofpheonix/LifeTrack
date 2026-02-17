@@ -2,11 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:pedometer/pedometer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String _snapshotKey = 'lifetrack_snapshot';
 const String _remindersKey = 'lifetrack_reminders';
 const String _recordsKey = 'lifetrack_records';
+const String _sleepKey = 'lifetrack_sleep';
+const String _profileKey = 'lifetrack_profile';
+const String _mealsKey = 'lifetrack_meals';
+const String _activitiesKey = 'lifetrack_activities';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -129,7 +134,11 @@ class LifeTrackStore extends ChangeNotifier {
     required this.diseaseGuide,
     required this.records,
     required this.recoveryData,
-  });
+    required this.userProfile,
+    required this.sleepLogs,
+  }) {
+    _initPedometer();
+  }
 
   HealthSnapshot snapshot;
   final List<ActivityLog> activities;
@@ -138,17 +147,45 @@ class LifeTrackStore extends ChangeNotifier {
   final List<DiseaseInfo> diseaseGuide;
   final List<RecoveryDataPoint> recoveryData;
   final List<HealthRecordEntry> records;
+  final List<SleepEntry> sleepLogs;
+  UserProfile userProfile;
+
+  StreamSubscription<StepCount>? _stepCountStream;
+
+  void _initPedometer() {
+    _stepCountStream = Pedometer.stepCountStream.listen(
+      (StepCount event) {
+        snapshot.steps = event.steps;
+        notifyListeners(); // Update UI in real-time
+        _persistSnapshot(); // Optional: might be too frequent, maybe debounce?
+        // optimizing: only persist if change > 100 or periodically.
+        // For now, let's just notify. We will persist on app pause or other events if needed.
+        // Or just persist. SharedPrefs is fast enough for occasional writes but 1Hz is too much.
+        // Let's not await persist here to avoid blocking.
+      },
+      onError: (Object error) {
+        // Handle error or ignore
+        debugPrint('Pedometer error: $error');
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _stepCountStream?.cancel();
+    super.dispose();
+  }
 
   static Future<LifeTrackStore> load() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     final HealthSnapshot snapshot = _decodeSnapshot(prefs.getString(_snapshotKey)) ??
         HealthSnapshot(
-          steps: 6840,
+          steps: 0, // Will be updated by pedometer
           stepsGoal: 10000,
           waterGlasses: 6,
           waterGoal: 8,
-          sleepHours: 6.8,
+          sleepHours: 0, // Calculated from logs
           calories: 1520,
           caloriesGoal: 2100,
         );
@@ -178,19 +215,40 @@ class LifeTrackStore extends ChangeNotifier {
           ),
         ];
 
+    final UserProfile userProfile = _decodeProfile(prefs.getString(_profileKey)) ??
+        UserProfile(name: 'User', age: 30, weight: 70, height: 170);
+
+    final List<SleepEntry> sleepLogs = _decodeSleep(prefs.getString(_sleepKey)) ?? <SleepEntry>[];
+    
+    // Recalculate sleep hours from logs
+    double totalSleep = 0;
+    final DateTime now = DateTime.now();
+    for (final SleepEntry log in sleepLogs) {
+      if (log.endTime.year == now.year && log.endTime.month == now.month && log.endTime.day == now.day) {
+        totalSleep += log.durationHours;
+      }
+    }
+    snapshot.sleepHours = totalSleep;
+
+    final List<MealEntry> meals = _decodeMeals(prefs.getString(_mealsKey)) ??
+        <MealEntry>[
+          MealEntry(id: 'seed_m1', mealType: 'Breakfast', title: 'Oats + Banana', calories: 320),
+          MealEntry(id: 'seed_m2', mealType: 'Lunch', title: 'Paneer salad bowl', calories: 460),
+          MealEntry(id: 'seed_m3', mealType: 'Snack', title: 'Nuts + Green tea', calories: 180),
+          MealEntry(id: 'seed_m4', mealType: 'Dinner', title: 'Dal + Brown rice', calories: 420),
+        ];
+
+    final List<ActivityLog> activities = _decodeActivities(prefs.getString(_activitiesKey)) ??
+        <ActivityLog>[
+          ActivityLog(id: 'seed_a1', name: 'Brisk walk', durationMinutes: 35, caloriesBurned: 210),
+          ActivityLog(id: 'seed_a2', name: 'Yoga', durationMinutes: 20, caloriesBurned: 90),
+          ActivityLog(id: 'seed_a3', name: 'Cycling', durationMinutes: 40, caloriesBurned: 310),
+        ];
+
     return LifeTrackStore(
       snapshot: snapshot,
-      activities: <ActivityLog>[
-        ActivityLog(name: 'Brisk walk', durationMinutes: 35, caloriesBurned: 210),
-        ActivityLog(name: 'Yoga', durationMinutes: 20, caloriesBurned: 90),
-        ActivityLog(name: 'Cycling', durationMinutes: 40, caloriesBurned: 310),
-      ],
-      meals: <MealEntry>[
-        MealEntry(mealType: 'Breakfast', title: 'Oats + Banana', calories: 320),
-        MealEntry(mealType: 'Lunch', title: 'Paneer salad bowl', calories: 460),
-        MealEntry(mealType: 'Snack', title: 'Nuts + Green tea', calories: 180),
-        MealEntry(mealType: 'Dinner', title: 'Dal + Brown rice', calories: 420),
-      ],
+      activities: activities,
+      meals: meals,
       reminders: reminders,
       diseaseGuide: <DiseaseInfo>[
         DiseaseInfo(
@@ -221,57 +279,159 @@ class LifeTrackStore extends ChangeNotifier {
         RecoveryDataPoint(month: 'M3', fastingGlucose: 136, postMealGlucose: 194),
         RecoveryDataPoint(month: 'M4', fastingGlucose: 124, postMealGlucose: 176),
       ],
+      userProfile: userProfile,
+      sleepLogs: sleepLogs,
     );
   }
 
   Future<void> addQuickActivity() async {
-    activities.insert(
-      0,
-      ActivityLog(name: 'Quick jog', durationMinutes: 15, caloriesBurned: 120),
+    final ActivityLog activity = ActivityLog(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      name: 'Quick jog',
+      durationMinutes: 15,
+      caloriesBurned: 120,
     );
-    snapshot.steps += 1800;
+    activities.insert(0, activity);
+    // snapshot.steps += 1800; // Removed: Pedometer handles steps now
     snapshot.calories = (snapshot.calories - 120).clamp(0, 9999);
     notifyListeners();
-    await _persist();
+    await _persistActivities();
+    await _persistSnapshot();
+  }
+
+  Future<void> deleteActivity(String id) async {
+    activities.removeWhere((ActivityLog item) => item.id == id);
+    notifyListeners();
+    await _persistActivities();
+  }
+
+  Future<void> addMeal(MealEntry meal) async {
+    meals.insert(0, meal);
+    snapshot.calories += meal.calories;
+    notifyListeners();
+    await _persistMeals();
+    await _persistSnapshot();
+  }
+
+  Future<void> deleteMeal(String id) async {
+    final int index = meals.indexWhere((MealEntry item) => item.id == id);
+    if (index != -1) {
+      final MealEntry meal = meals[index];
+      snapshot.calories = (snapshot.calories - meal.calories).clamp(0, 9999);
+      meals.removeAt(index);
+      notifyListeners();
+      await _persistMeals();
+      await _persistSnapshot();
+    }
   }
 
   Future<void> addWaterGlass() async {
     if (snapshot.waterGlasses < 20) {
       snapshot.waterGlasses += 1;
       notifyListeners();
-      await _persist();
+      await _persistSnapshot();
     }
   }
 
   Future<void> toggleReminder(int index, bool enabled) async {
     reminders[index].enabled = enabled;
     notifyListeners();
-    await _persist();
+    await _persistReminders();
   }
 
   Future<void> addRecord(HealthRecordEntry record) async {
     records.insert(0, record);
     notifyListeners();
-    await _persist();
+    await _persistRecords();
   }
 
   Future<void> deleteRecord(String id) async {
     records.removeWhere((HealthRecordEntry item) => item.id == id);
     notifyListeners();
-    await _persist();
+    await _persistRecords();
   }
 
-  Future<void> _persist() async {
+  Future<void> addSleepLog(SleepEntry entry) async {
+    sleepLogs.insert(0, entry);
+    // Update snapshot if today
+    final DateTime now = DateTime.now();
+    if (entry.endTime.year == now.year && entry.endTime.month == now.month && entry.endTime.day == now.day) {
+       snapshot.sleepHours += entry.durationHours;
+    }
+    notifyListeners();
+    await _persistSleep();
+    await _persistSnapshot();
+  }
+
+  Future<void> deleteSleepLog(String id) async {
+    final int index = sleepLogs.indexWhere((SleepEntry item) => item.id == id);
+    if (index != -1) {
+       final SleepEntry entry = sleepLogs[index];
+       final DateTime now = DateTime.now();
+       if (entry.endTime.year == now.year && entry.endTime.month == now.month && entry.endTime.day == now.day) {
+         snapshot.sleepHours = (snapshot.sleepHours - entry.durationHours).clamp(0.0, 24.0);
+       }
+       sleepLogs.removeAt(index);
+       notifyListeners();
+       await _persistSleep();
+       await _persistSnapshot();
+    }
+  }
+
+  Future<void> updateProfile(UserProfile profile) async {
+    userProfile = profile;
+    notifyListeners();
+    await _persistProfile();
+  }
+
+  Future<void> _persistSnapshot() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(_snapshotKey, jsonEncode(snapshot.toJson()));
+  }
+
+  Future<void> _persistReminders() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _remindersKey,
       jsonEncode(reminders.map((ReminderItem item) => item.toJson()).toList()),
     );
+  }
+
+  Future<void> _persistRecords() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _recordsKey,
       jsonEncode(records.map((HealthRecordEntry item) => item.toJson()).toList()),
     );
+  }
+
+  Future<void> _persistMeals() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _mealsKey,
+      jsonEncode(meals.map((MealEntry item) => item.toJson()).toList()),
+    );
+  }
+
+  Future<void> _persistActivities() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _activitiesKey,
+      jsonEncode(activities.map((ActivityLog item) => item.toJson()).toList()),
+    );
+  }
+
+  Future<void> _persistSleep() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _sleepKey,
+      jsonEncode(sleepLogs.map((SleepEntry item) => item.toJson()).toList()),
+    );
+  }
+
+  Future<void> _persistProfile() async {
+     final SharedPreferences prefs = await SharedPreferences.getInstance();
+     await prefs.setString(_profileKey, jsonEncode(userProfile.toJson()));
   }
 }
 
@@ -310,6 +470,60 @@ List<HealthRecordEntry>? _decodeRecords(String? raw) {
     return json
         .map((dynamic e) => HealthRecordEntry.fromJson(e as Map<String, dynamic>))
         .toList();
+  } catch (_) {
+    return null;
+  }
+}
+
+List<MealEntry>? _decodeMeals(String? raw) {
+  if (raw == null || raw.isEmpty) {
+    return null;
+  }
+  try {
+    final List<dynamic> json = jsonDecode(raw) as List<dynamic>;
+    return json
+        .map((dynamic e) => MealEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+  } catch (_) {
+    return null;
+  }
+}
+
+List<ActivityLog>? _decodeActivities(String? raw) {
+  if (raw == null || raw.isEmpty) {
+    return null;
+  }
+  try {
+    final List<dynamic> json = jsonDecode(raw) as List<dynamic>;
+    return json
+        .map((dynamic e) => ActivityLog.fromJson(e as Map<String, dynamic>))
+        .toList();
+  } catch (_) {
+    return null;
+  }
+}
+
+List<SleepEntry>? _decodeSleep(String? raw) {
+  if (raw == null || raw.isEmpty) {
+    return null;
+  }
+  try {
+    final List<dynamic> json = jsonDecode(raw) as List<dynamic>;
+    return json
+        .map((dynamic e) => SleepEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+  } catch (_) {
+    return null;
+  }
+}
+
+UserProfile? _decodeProfile(String? raw) {
+  if (raw == null || raw.isEmpty) {
+    return null;
+  }
+  try {
+    final Map<String, dynamic> json = jsonDecode(raw) as Map<String, dynamic>;
+    return UserProfile.fromJson(json);
   } catch (_) {
     return null;
   }
@@ -365,14 +579,34 @@ class _LifeTrackHomePageState extends State<LifeTrackHomePage> {
         onQuickLog: () {
           widget.store.addQuickActivity();
         },
+        onAddSleep: () async {
+          final dynamic result = await showDialog(
+            context: context,
+            builder: (BuildContext context) => const SleepLogDialog(),
+          );
+          if (result != null && result is Map<String, dynamic>) {
+             widget.store.addSleepLog(
+               SleepEntry(
+                 id: DateTime.now().microsecondsSinceEpoch.toString(),
+                 startTime: result['start'] as DateTime,
+                 endTime: result['end'] as DateTime,
+               ),
+             );
+          }
+        },
       ),
       ActivityPage(
         activities: widget.store.activities,
         onQuickLog: () {
           widget.store.addQuickActivity();
         },
+        onDeleteActivity: (String id) => widget.store.deleteActivity(id),
       ),
-      NutritionPage(meals: widget.store.meals),
+      NutritionPage(
+        meals: widget.store.meals,
+        onAddMeal: (MealEntry meal) => widget.store.addMeal(meal),
+        onDeleteMeal: (String id) => widget.store.deleteMeal(id),
+      ),
       ReminderPage(
         reminders: widget.store.reminders,
         onToggle: (int index, bool enabled) {
@@ -393,7 +627,24 @@ class _LifeTrackHomePageState extends State<LifeTrackHomePage> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('LifeTrack')),
+      appBar: AppBar(
+        title: const Text('LifeTrack'),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (BuildContext context) => ProfilePage(
+                    userProfile: widget.store.userProfile,
+                    onUpdateProfile: (UserProfile p) => widget.store.updateProfile(p),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -442,11 +693,13 @@ class DashboardPage extends StatelessWidget {
     required this.snapshot,
     required this.onAddWater,
     required this.onQuickLog,
+    required this.onAddSleep,
   });
 
   final HealthSnapshot snapshot;
   final VoidCallback onAddWater;
   final VoidCallback onQuickLog;
+  final VoidCallback onAddSleep;
 
   @override
   Widget build(BuildContext context) {
@@ -486,6 +739,7 @@ class DashboardPage extends StatelessWidget {
                 title: 'Sleep',
                 value: '${snapshot.sleepHours.toStringAsFixed(1)} h',
                 subtitle: 'Target 8.0 h',
+                onTap: onAddSleep,
               ),
             ),
             AnimatedFadeSlide(
@@ -566,10 +820,12 @@ class ActivityPage extends StatelessWidget {
     super.key,
     required this.activities,
     required this.onQuickLog,
+    required this.onDeleteActivity,
   });
 
   final List<ActivityLog> activities;
   final VoidCallback onQuickLog;
+  final void Function(String id) onDeleteActivity;
 
   @override
   Widget build(BuildContext context) {
@@ -626,6 +882,10 @@ class ActivityPage extends StatelessWidget {
                       ),
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                    onPressed: () => onDeleteActivity(activity.id),
+                  ),
                 ],
               ),
             ),
@@ -638,9 +898,16 @@ class ActivityPage extends StatelessWidget {
 }
 
 class NutritionPage extends StatelessWidget {
-  const NutritionPage({super.key, required this.meals});
+  const NutritionPage({
+    super.key,
+    required this.meals,
+    required this.onAddMeal,
+    required this.onDeleteMeal,
+  });
 
   final List<MealEntry> meals;
+  final void Function(MealEntry meal) onAddMeal;
+  final void Function(String id) onDeleteMeal;
 
   @override
   Widget build(BuildContext context) {
@@ -649,7 +916,31 @@ class NutritionPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: <Widget>[
-        Text('Nutrition', style: Theme.of(context).textTheme.titleLarge),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Text('Nutrition', style: Theme.of(context).textTheme.titleLarge),
+            FilledButton.icon(
+              onPressed: () async {
+                final dynamic result = await showDialog(
+                  context: context,
+                  builder: (BuildContext context) => const MealCalculatorDialog(),
+                );
+                if (result != null && result is Map<String, dynamic>) {
+                   final MealEntry meal = MealEntry(
+                     id: DateTime.now().microsecondsSinceEpoch.toString(),
+                     mealType: 'Snack', // Default or could be selected
+                     title: result['title'] as String,
+                     calories: result['calories'] as int,
+                   );
+                   onAddMeal(meal);
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Meal'),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         Card(
           child: ListTile(
@@ -671,7 +962,11 @@ class NutritionPage extends StatelessWidget {
                 child: Icon(_mealIcon(meal.mealType), color: const Color(0xFF1D8A6F)),
               ),
               title: Text('${meal.mealType}: ${meal.title}'),
-              trailing: Text('${meal.calories} kcal'),
+              subtitle: Text('${meal.calories} kcal'),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20),
+                onPressed: () => onDeleteMeal(meal.id),
+             ),
             ),
             ),
           );
@@ -1159,21 +1454,26 @@ class MetricCard extends StatelessWidget {
     required this.title,
     required this.value,
     required this.subtitle,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String value;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 170,
       child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
+        clipBehavior: Clip.hardEdge,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Container(
@@ -1192,6 +1492,7 @@ class MetricCard extends StatelessWidget {
               Text(subtitle),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -1374,7 +1675,7 @@ class HealthSnapshot {
   final int stepsGoal;
   int waterGlasses;
   final int waterGoal;
-  final double sleepHours;
+  double sleepHours;
   int calories;
   final int caloriesGoal;
 
@@ -1405,26 +1706,131 @@ class HealthSnapshot {
 
 class ActivityLog {
   ActivityLog({
+    required this.id,
     required this.name,
     required this.durationMinutes,
     required this.caloriesBurned,
   });
 
+  final String id;
   final String name;
   final int durationMinutes;
   final int caloriesBurned;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'name': name,
+      'durationMinutes': durationMinutes,
+      'caloriesBurned': caloriesBurned,
+    };
+  }
+
+  factory ActivityLog.fromJson(Map<String, dynamic> json) {
+    return ActivityLog(
+      id: json['id'] as String? ?? DateTime.now().microsecondsSinceEpoch.toString(),
+      name: json['name'] as String? ?? 'Activity',
+      durationMinutes: json['durationMinutes'] as int? ?? 0,
+      caloriesBurned: json['caloriesBurned'] as int? ?? 0,
+    );
+  }
 }
 
 class MealEntry {
   MealEntry({
+    required this.id,
     required this.mealType,
     required this.title,
     required this.calories,
   });
 
+  final String id;
   final String mealType;
   final String title;
   final int calories;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'mealType': mealType,
+      'title': title,
+      'calories': calories,
+    };
+  }
+
+  factory MealEntry.fromJson(Map<String, dynamic> json) {
+    return MealEntry(
+      id: json['id'] as String? ?? DateTime.now().microsecondsSinceEpoch.toString(),
+      mealType: json['mealType'] as String? ?? 'Snack',
+      title: json['title'] as String? ?? 'Food',
+      calories: json['calories'] as int? ?? 0,
+    );
+  }
+}
+
+class SleepEntry {
+  SleepEntry({
+    required this.id,
+    required this.startTime,
+    required this.endTime,
+  });
+
+  final String id;
+  final DateTime startTime;
+  final DateTime endTime;
+
+  double get durationHours {
+    final Duration diff = endTime.difference(startTime);
+    return diff.inMinutes / 60.0;
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
+    };
+  }
+
+  factory SleepEntry.fromJson(Map<String, dynamic> json) {
+    return SleepEntry(
+      id: json['id'] as String? ?? DateTime.now().microsecondsSinceEpoch.toString(),
+      startTime: DateTime.tryParse(json['startTime'] as String? ?? '') ?? DateTime.now(),
+      endTime: DateTime.tryParse(json['endTime'] as String? ?? '') ?? DateTime.now(),
+    );
+  }
+}
+
+class UserProfile {
+  UserProfile({
+    required this.name,
+    required this.age,
+    required this.weight,
+    required this.height,
+  });
+
+  String name;
+  int age;
+  double weight;
+  double height;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'name': name,
+      'age': age,
+      'weight': weight,
+      'height': height,
+    };
+  }
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      name: json['name'] as String? ?? 'User',
+      age: json['age'] as int? ?? 30,
+      weight: (json['weight'] as num?)?.toDouble() ?? 70.0,
+      height: (json['height'] as num?)?.toDouble() ?? 170.0,
+    );
+  }
 }
 
 class ReminderItem {
@@ -1527,4 +1933,270 @@ IconData _mealIcon(String mealType) {
     return Icons.nightlight_round;
   }
   return Icons.local_cafe_outlined;
+}
+
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key, required this.userProfile, required this.onUpdateProfile});
+
+  final UserProfile userProfile;
+  final ValueChanged<UserProfile> onUpdateProfile;
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  late TextEditingController _nameController;
+  late TextEditingController _ageController;
+  late TextEditingController _weightController;
+  late TextEditingController _heightController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.userProfile.name);
+    _ageController = TextEditingController(text: widget.userProfile.age.toString());
+    _weightController = TextEditingController(text: widget.userProfile.weight.toString());
+    _heightController = TextEditingController(text: widget.userProfile.height.toString());
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _ageController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final UserProfile newProfile = UserProfile(
+      name: _nameController.text.trim(),
+      age: int.tryParse(_ageController.text) ?? widget.userProfile.age,
+      weight: double.tryParse(_weightController.text) ?? widget.userProfile.weight,
+      height: double.tryParse(_heightController.text) ?? widget.userProfile.height,
+    );
+    widget.onUpdateProfile(newProfile);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Profile')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: <Widget>[
+          const CircleAvatar(
+            radius: 40,
+            child: Icon(Icons.person, size: 40),
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_outline)),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _ageController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Age', prefixIcon: Icon(Icons.cake_outlined)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _weightController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Weight (kg)', prefixIcon: Icon(Icons.monitor_weight_outlined)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _heightController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Height (cm)', prefixIcon: Icon(Icons.height)),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: _save,
+            icon: const Icon(Icons.save),
+            label: const Text('Save Profile'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MealCalculatorDialog extends StatefulWidget {
+  const MealCalculatorDialog({super.key});
+
+  @override
+  State<MealCalculatorDialog> createState() => _MealCalculatorDialogState();
+}
+
+class _MealCalculatorDialogState extends State<MealCalculatorDialog> {
+  final List<Map<String, dynamic>> _items = <Map<String, dynamic>>[];
+  final TextEditingController _itemController = TextEditingController();
+  final TextEditingController _calsController = TextEditingController();
+
+  void _addItem() {
+    final String name = _itemController.text.trim();
+    final int? cals = int.tryParse(_calsController.text);
+    if (name.isNotEmpty && cals != null) {
+      setState(() {
+        _items.add(<String, dynamic>{'name': name, 'calories': cals});
+      });
+      _itemController.clear();
+      _calsController.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final int total = _items.fold<int>(0, (int p, Map<String, dynamic> c) => p + (c['calories'] as int));
+
+    return AlertDialog(
+      title: const Text('Meal Calculator'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _itemController,
+                    decoration: const InputDecoration(labelText: 'Item (e.g. apple)'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _calsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Kcal'),
+                  ),
+                ),
+                IconButton(onPressed: _addItem, icon: const Icon(Icons.add_circle)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Divider(),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _items.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final Map<String, dynamic> item = _items[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(item['name'] as String),
+                    trailing: Text('${item['calories']} kcal'),
+                    contentPadding: EdgeInsets.zero,
+                  );
+                },
+              ),
+            ),
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  const Text('Total:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('$total kcal', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1D8A6F))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: _items.isEmpty
+              ? null
+              : () {
+                  Navigator.pop(context, <String, dynamic>{'title': 'Calculated Meal', 'calories': total});
+                },
+          child: const Text('Add Meal'),
+        ),
+      ],
+    );
+  }
+}
+
+class SleepLogDialog extends StatefulWidget {
+  const SleepLogDialog({super.key});
+
+  @override
+  State<SleepLogDialog> createState() => _SleepLogDialogState();
+}
+
+class _SleepLogDialogState extends State<SleepLogDialog> {
+  DateTime _start = DateTime.now().subtract(const Duration(hours: 8));
+  DateTime _end = DateTime.now();
+
+  Future<void> _pickTime(bool isStart) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(isStart ? _start : _end),
+    );
+    if (picked != null) {
+      setState(() {
+        final DateTime base = isStart ? _start : _end;
+        final DateTime newTime = DateTime(base.year, base.month, base.day, picked.hour, picked.minute);
+        if (isStart) {
+          _start = newTime;
+        } else {
+          _end = newTime;
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Duration diff = _end.difference(_start);
+    final String duration = '${diff.inHours}h ${diff.inMinutes % 60}m';
+
+    return AlertDialog(
+      title: const Text('Log Sleep'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ListTile(
+            title: const Text('Bedtime'),
+            trailing: Text(TimeOfDay.fromDateTime(_start).format(context)),
+            onTap: () => _pickTime(true),
+          ),
+          ListTile(
+            title: const Text('Wake up'),
+            trailing: Text(TimeOfDay.fromDateTime(_end).format(context)),
+            onTap: () => _pickTime(false),
+          ),
+          const SizedBox(height: 10),
+          Text('Duration: $duration', style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(context, <String, dynamic>{'start': _start, 'end': _end});
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
 }
