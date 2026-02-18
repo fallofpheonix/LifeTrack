@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'health_log.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
 class GlobalErrorHandler {
   static void handleFlutterError(FlutterErrorDetails details) {
@@ -61,16 +61,7 @@ class _AppErrorBoundaryState extends State<AppErrorBoundary> {
     
     return widget.child;
     
-    // Better strategy for standard Flutter ErrorBoundary is using builder in main, 
-    // but here we want to catch build errors in this subtree if possible, 
-    // though Flutter's ErrorWidget.builder is global. 
-    // So usually ErrorBoundary in Flutter handles exceptions during build directly if custom builder used globally.
-    // However, purely isolating a subtree component-wise is hard without using standard ErrorWidget.builder override.
-    
-    // Let's stick to the Child return for now, and rely on global `builder` override in main for rendering errors.
-    // But we can catch async errors if passed via some state management, which is rare for ErrorBoundary widgets in Flutter (unlike React).
-    
-    return widget.child;
+
   }
   
   // This widget is actually more of a placeholder for where we *would* wrap functionality 

@@ -1,0 +1,32 @@
+{
+    "scientists": [
+        {
+            "name": "Louis Pasteur",
+            "contribution": "Germ Theory",
+            "relevanceTag": "infectious_disease",
+            "domain": "Infectious Disease",
+            "fact": "Pasteur demonstrated microorganisms cause disease, enabling vaccination science."
+        },
+        {
+            "name": "William Harvey",
+            "contribution": "Circulation of Blood",
+            "relevanceTag": "cardiology",
+            "domain": "Cardiology",
+            "fact": "Harvey was the first to describe completely and in detail the systemic circulation and properties of blood being pumped to the brain and body by the heart."
+        },
+        {
+            "name": "Marie Curie",
+            "contribution": "Radioactivity",
+            "relevanceTag": "radiology",
+            "domain": "Radiology",
+            "fact": "Curie conducted pioneering research on radioactivity and discovered elements polonium and radium."
+        },
+        {
+            "name": "Alexander Fleming",
+            "contribution": "Penicillin",
+            "relevanceTag": "pharmacology",
+            "domain": "Pharmacology",
+            "fact": "Fleming discovered the world's first broadly effective antibiotic substance, which he named penicillin."
+        }
+    ]
+}

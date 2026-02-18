@@ -1,7 +1,7 @@
 import 'dart:math';
 
-import 'health_log.dart';
-import '../../data/models/sync/sync_operation.dart';
+import 'package:lifetrack/core/services/health_log.dart';
+import 'package:lifetrack/data/models/sync/sync_operation.dart';
 
 class MockBackend {
   final Random _random = Random();

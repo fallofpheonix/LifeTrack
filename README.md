@@ -38,9 +38,20 @@ Never miss a beat with customizable alerts:
 - **Hydration**: Nudges to drink water throughout the day.
 - **Routine**: Alerts for exercise or other health-related activities.
 
+### 🧠 Intelligence Engine
+- **Consistency Tracker**: Visualizes your adherence to logging habits.
+- **Plateau Detection**: Identifies weight stagnation periods to suggest routine changes.
+- **Smart Suggestions**: Context-aware tips based on your recent activity and vitals.
+
+### 📚 Education Layer
+- **Disease Guide**: Comprehensive info on common conditions.
+- **Evidence-Based**: Access clinical reasoning and research summaries.
+- **Scientist Profiles**: Learn about pioneers in medical history (e.g., Pasteur, Fleming).
+
 ### 🔒 Privacy Focused
-- **Local Storage**: All your health data is stored locally on your device using `shared_preferences`.
-- **No Cloud Sync (MVP)**: Your data stays with you.
+- **Local Encryption**: Sensitive data is encrypted on-device.
+- **Data Governance**: Automatic retention policies and full data export capabilities.
+- **Offline First**: Full functionality without internet connection.
 
 ## Tech Stack
 

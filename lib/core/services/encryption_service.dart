@@ -1,6 +1,6 @@
 
 import 'package:encrypt/encrypt.dart' as encrypt;
-import 'key_manager.dart';
+import 'package:lifetrack/core/services/key_manager.dart';
 
 class EncryptionService {
   final KeyManager _keyManager;

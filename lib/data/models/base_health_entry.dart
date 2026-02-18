@@ -1,5 +1,5 @@
-import 'enums/data_source.dart';
-import 'mixins/audit_fields_mixin.dart';
+import 'package:lifetrack/data/models/enums/data_source.dart';
+import 'package:lifetrack/data/models/mixins/audit_fields_mixin.dart';
 
 abstract class BaseHealthEntry with AuditFieldsMixin {
   BaseHealthEntry({

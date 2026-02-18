@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "conditions": [
+    {
+      "id": "hypertension",
+      "name": "Hypertension",
+      "category": "Cardiometabolic",
+      "summary": "Chronic elevation of arterial blood pressure.",
+      "symptoms": ["Headache", "Dizziness", "Often asymptomatic"],
+      "prevention": ["Exercise", "Reduce salt", "Weight control"],
+      "management": ["ACE inhibitors", "Monitoring", "Lifestyle correction"]
+    },
+    {
+      "id": "type_2_diabetes",
+      "name": "Type 2 Diabetes",
+      "category": "Cardiometabolic",
+      "summary": "A chronic condition that affects the way the body processes blood sugar (glucose).",
+      "symptoms": ["Increased thirst", "Frequent urination", "Hunger", "Fatigue"],
+      "prevention": ["Healthy diet", "Regular exercise", "Weight loss"],
+      "management": ["Insulin therapy", "Metformin", "Dietary changes"]
+    },
+    {
+      "id": "asthma",
+      "name": "Asthma",
+      "category": "Respiratory",
+      "summary": "A condition in which your airways narrow and swell and may produce extra mucus.",
+      "symptoms": ["Shortness of breath", "Chest tightness or pain", "Wheezing"],
+      "prevention": ["Avoid triggers", "Get vaccinated for flu", "Allergy shots"],
+      "management": ["Inhalers", "Anti-inflammatory medicines", "Bronchial thermoplasty"]
+    },
+    {
+      "id": "iron_deficiency_anemia",
+      "name": "Iron Deficiency Anemia",
+      "category": "Nutritional",
+      "summary": "A common type of anemia — a condition in which blood lacks adequate healthy red blood cells.",
+      "symptoms": ["Extreme fatigue", "Weakness", "Pale skin", "Chest pain"],
+      "prevention": ["Iron-rich foods", "Vitamin C (helps absorption)"],
+      "management": ["Iron supplements", "Treating underlying cause"]
+    },
+    {
+      "id": "influenza",
+      "name": "Influenza",
+      "category": "General",
+      "summary": "A viral infection that attacks your respiratory system — your nose, throat and lungs.",
+      "symptoms": ["Fever", "Aching muscles", "Chills and sweats", "Headache"],
+      "prevention": ["Annual flu vaccination", "Hand washing", "Avoid close contact"],
+      "management": ["Rest", "Fluids", "Antiviral drugs"]
+    }
+  ]
+}

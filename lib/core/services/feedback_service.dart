@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'health_log.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
 class FeedbackService {
   static void showUnifiedFeedback(BuildContext context, {

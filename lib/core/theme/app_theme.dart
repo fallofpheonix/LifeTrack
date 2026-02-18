@@ -1,98 +1,140 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static ThemeData get darkTheme {
+  // Semantic Colors
+  static const Color _primaryTeal = Color(0xFF009688); // Teal 500
+  static const Color _lightSurface = Color(0xFFFFFFFF);
+  static const Color _darkSurface = Color(0xFF1E1E1E);
+  static const Color _lightBackground = Color(0xFFF5F5F5); // Grey 100
+  static const Color _darkBackground = Color(0xFF121212);
+  static const Color _errorColor = Color(0xFFB00020);
+
+
+
+  static ThemeData get lightTheme {
     return ThemeData(
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF121212),
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF4DB6AC), // Lighter Teal for dark mode
-        secondary: Color(0xFF80CBC4),
-        surface: Color(0xFF1E1E1E),
-        error: Color(0xFFCF6679),
-        onPrimary: Colors.black,
+      useMaterial3: true,
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: _lightBackground,
+      colorScheme: const ColorScheme.light(
+        primary: _primaryTeal,
+        secondary: Color(0xFF00796B), // Teal 700
+        surface: _lightSurface,
+        onSurface: Colors.black87,
+        error: _errorColor,
       ),
       appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
+        iconTheme: IconThemeData(color: Colors.black87),
         titleTextStyle: TextStyle(
+          color: Colors.black87,
           fontSize: 24,
           fontWeight: FontWeight.w800,
-          color: Color(0xFFE0F2F1),
           letterSpacing: -0.5,
         ),
-        iconTheme: IconThemeData(color: Color(0xFFB2DFDB)),
       ),
-      cardTheme: CardThemeData(
-        color: const Color(0xFF1E1E1E),
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-           borderRadius: BorderRadius.circular(20),
-           side: BorderSide(color: Colors.white.withOpacity(0.05)),
+      cardTheme: const CardThemeData(
+        color: _lightSurface,
+        elevation: 2,
+        shadowColor: Colors.black12,
+        margin: EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _primaryTeal,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        margin: const EdgeInsets.only(bottom: 12),
       ),
       textTheme: const TextTheme(
-        headlineSmall: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Color(0xFFE0F2F1), letterSpacing: -0.5),
-        titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFFE0F2F1)),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFFB2DFDB)),
-        bodyMedium: TextStyle(fontSize: 14, height: 1.5, color: Color(0xFFB0BEC5)),
-        bodySmall: TextStyle(fontSize: 12, color: Color(0xFF78909C)),
+        headlineSmall: TextStyle(fontSize: 28, color: Colors.black87, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+        titleLarge: TextStyle(fontSize: 22, color: Colors.black87, fontWeight: FontWeight.w700),
+        titleMedium: TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.w600),
+        bodyMedium: TextStyle(fontSize: 14, color: Colors.black54, height: 1.5),
+        bodySmall: TextStyle(fontSize: 12, color: Colors.black45),
       ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFF2C2C2C),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF4DB6AC), width: 1.5),
-        ),
-        labelStyle: const TextStyle(color: Color(0xFF78909C)),
-        prefixIconColor: const Color(0xFF78909C),
+      iconTheme: const IconThemeData(color: _primaryTeal),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: _lightSurface,
+        selectedItemColor: _primaryTeal,
+        unselectedItemColor: Colors.black26,
+        type: BottomNavigationBarType.fixed,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
       ),
-      iconTheme: const IconThemeData(color: Color(0xFF4DB6AC)),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: _darkBackground,
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFF4DB6AC), // Teal 300 (Lighter for Dark Mode)
+        secondary: Color(0xFF80CBC4),
+        surface: _darkSurface,
+        onSurface: Color(0xFFE0E0E0),
+        error: Color(0xFFCF6679),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: IconThemeData(color: Color(0xFFE0E0E0)),
+        titleTextStyle: TextStyle(
+          color: Color(0xFFE0E0E0),
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.5,
+        ),
+      ),
+      cardTheme: const CardThemeData(
+        color: _darkSurface,
+        elevation: 0,
+        margin: EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+          side: BorderSide(color: Colors.white10), // Subtle border for contrast
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF4DB6AC),
           foregroundColor: Colors.black,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF4DB6AC),
-          foregroundColor: Colors.black,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
+      textTheme: const TextTheme(
+        headlineSmall: TextStyle(fontSize: 28, color: Color(0xFFE0E0E0), fontWeight: FontWeight.w800, letterSpacing: -0.5),
+        titleLarge: TextStyle(fontSize: 22, color: Color(0xFFE0E0E0), fontWeight: FontWeight.w700),
+        titleMedium: TextStyle(fontSize: 16, color: Color(0xFFB2DFDB), fontWeight: FontWeight.w600),
+        bodyMedium: TextStyle(fontSize: 14, color: Color(0xFFB0BEC5), height: 1.5),
+        bodySmall: TextStyle(fontSize: 12, color: Color(0xFF78909C)),
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: const Color(0xFF1E1E1E),
-        indicatorColor: const Color(0xFF4DB6AC).withOpacity(0.2),
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const TextStyle(color: Color(0xFF4DB6AC), fontWeight: FontWeight.w700);
-          }
-          return const TextStyle(color: Color(0xFF78909C), fontWeight: FontWeight.w500);
-        }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-           if (states.contains(WidgetState.selected)) {
-             return const IconThemeData(color: Color(0xFF4DB6AC));
-           }
-           return const IconThemeData(color: Color(0xFF78909C));
-        }),
+      iconTheme: const IconThemeData(color: Color(0xFF4DB6AC)),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: _darkSurface,
+        selectedItemColor: Color(0xFF4DB6AC),
+        unselectedItemColor: Colors.white24,
+        type: BottomNavigationBarType.fixed,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
       ),
-      useMaterial3: true,
     );
   }
 }
+

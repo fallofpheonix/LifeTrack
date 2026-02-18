@@ -1,32 +1,25 @@
+import 'package:lifetrack/core/ui/app_page_layout.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../data/models/vitals/blood_pressure_entry.dart';
-import '../../data/models/vitals/heart_rate_entry.dart';
-import '../../data/models/vitals/glucose_entry.dart';
+import 'package:lifetrack/core/ui/base_card.dart';
+import 'package:lifetrack/core/ui/empty_state.dart';
+import 'package:lifetrack/data/models/vitals/blood_pressure_entry.dart';
+import 'package:lifetrack/data/models/vitals/heart_rate_entry.dart';
+import 'package:lifetrack/data/models/vitals/glucose_entry.dart';
+import 'package:lifetrack/features/vitals/vitals_provider.dart';
 
-class VitalsPage extends StatefulWidget {
-  const VitalsPage({
-    super.key,
-    required this.bpHistory,
-    required this.hrHistory,
-    required this.glucoseHistory,
-    required this.onAddBP,
-    required this.onAddHR,
-    required this.onAddGlucose,
-  });
-
-  final List<BloodPressureEntry> bpHistory;
-  final List<HeartRateEntry> hrHistory;
-  final List<GlucoseEntry> glucoseHistory;
-  final Function(BloodPressureEntry) onAddBP;
-  final Function(HeartRateEntry) onAddHR;
-  final Function(GlucoseEntry) onAddGlucose;
+class VitalsPage extends ConsumerStatefulWidget {
+  const VitalsPage({super.key});
 
   @override
-  State<VitalsPage> createState() => _VitalsPageState();
+  ConsumerState<VitalsPage> createState() => _VitalsPageState();
 }
 
-class _VitalsPageState extends State<VitalsPage> {
+class _VitalsPageState extends ConsumerState<VitalsPage> {
+  // ... Dialog methods (kept same for brevity, assuming standard Flutter dialogs are fine for now)
+  // To strictly follow "UI Core", dialogs should maybe use a standard styling, but standard AlertDialog is okay.
+
   void _showAddBPDialog() {
     final TextEditingController sysController = TextEditingController();
     final TextEditingController diaController = TextEditingController();
@@ -56,7 +49,7 @@ class _VitalsPageState extends State<VitalsPage> {
               final int? sys = int.tryParse(sysController.text);
               final int? dia = int.tryParse(diaController.text);
               if (sys != null && dia != null) {
-                widget.onAddBP(BloodPressureEntry(
+                ref.read(vitalsProvider.notifier).addBloodPressure(BloodPressureEntry(
                   id: DateTime.now().millisecondsSinceEpoch.toString(),
                   systolic: sys,
                   diastolic: dia,
@@ -89,7 +82,7 @@ class _VitalsPageState extends State<VitalsPage> {
             onPressed: () {
               final int? bpm = int.tryParse(bpmController.text);
               if (bpm != null) {
-                widget.onAddHR(HeartRateEntry(
+                ref.read(vitalsProvider.notifier).addHeartRate(HeartRateEntry(
                   id: DateTime.now().millisecondsSinceEpoch.toString(),
                   bpm: bpm,
                   date: DateTime.now(),
@@ -145,7 +138,7 @@ class _VitalsPageState extends State<VitalsPage> {
                 onPressed: () {
                   final int? level = int.tryParse(levelController.text);
                   if (level != null) {
-                    widget.onAddGlucose(GlucoseEntry(
+                    ref.read(vitalsProvider.notifier).addGlucose(GlucoseEntry(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       levelMgDl: level,
                       context: selectedContext,
@@ -173,90 +166,89 @@ class _VitalsPageState extends State<VitalsPage> {
     required List<dynamic> history,
     required VitalsChartType type,
   }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-                      child: Icon(icon, color: color),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                        Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-                      ],
-                    ),
-                  ],
-                ),
-                IconButton(onPressed: onAdd, icon: const Icon(Icons.add_circle_outline)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                Text(value, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: color)),
-                if (history.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text('Latest', style: Theme.of(context).textTheme.bodySmall),
+    return BaseCard(
+      child: Column(
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+                    child: Icon(icon, color: color),
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (history.isNotEmpty)
-              SizedBox(
-                height: 120, // Chart Height
-                width: double.infinity,
-                child: CustomPaint(
-                  painter: VitalsChartPainter(
-                    history: history,
-                    type: type,
-                    color: color,
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                    ],
                   ),
+                ],
+              ),
+              IconButton(onPressed: onAdd, icon: const Icon(Icons.add_circle_outline)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              Text(value, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: color)),
+              if (history.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('Latest', style: Theme.of(context).textTheme.bodySmall),
                 ),
-              )
-            else
-               SizedBox(
-                 height: 40,
-                 child: Center(child: Text('No data yet', style: TextStyle(color: Colors.grey[400]))),
-               ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (history.isNotEmpty)
+            SizedBox(
+              height: 120, // Chart Height
+              width: double.infinity,
+              child: CustomPaint(
+                painter: VitalsChartPainter(
+                  history: history,
+                  type: type,
+                  color: color,
+                ),
+              ),
+            )
+          else
+             EmptyState(title: "No data", icon: Icons.show_chart, subtitle: "Add entry to see trends"),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final String lastBP = widget.bpHistory.isNotEmpty
-        ? '${widget.bpHistory.first.systolic}/${widget.bpHistory.first.diastolic}'
+    final vitalsState = ref.watch(vitalsProvider);
+
+
+    final bpHistory = vitalsState.bpHistory;
+    final hrHistory = vitalsState.hrHistory;
+    final glucoseHistory = vitalsState.glucoseHistory;
+
+    final String lastBP = bpHistory.isNotEmpty
+        ? '${bpHistory.first.systolic}/${bpHistory.first.diastolic}'
         : '--/--';
-    final String lastHR = widget.hrHistory.isNotEmpty
-        ? '${widget.hrHistory.first.bpm}'
+    final String lastHR = hrHistory.isNotEmpty
+        ? '${hrHistory.first.bpm}'
         : '--';
-    final String lastGlucose = widget.glucoseHistory.isNotEmpty
-        ? '${widget.glucoseHistory.first.levelMgDl}'
+    final String lastGlucose = glucoseHistory.isNotEmpty
+        ? '${glucoseHistory.first.levelMgDl}'
         : '--';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Vitals Dashboard')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
+      body: AppPageLayout(
+        child: ListView(
+          children: <Widget>[
           _buildVitalsCardWithChart(
             title: 'Blood Pressure',
             value: '$lastBP mmHg',
@@ -264,7 +256,7 @@ class _VitalsPageState extends State<VitalsPage> {
             icon: Icons.favorite_border,
             color: Colors.red,
             onAdd: _showAddBPDialog,
-            history: widget.bpHistory,
+            history: bpHistory,
             type: VitalsChartType.bloodPressure,
           ),
           _buildVitalsCardWithChart(
@@ -274,7 +266,7 @@ class _VitalsPageState extends State<VitalsPage> {
             icon: Icons.monitor_heart,
             color: Colors.pink,
             onAdd: _showAddHRDialog,
-            history: widget.hrHistory,
+            history: hrHistory,
             type: VitalsChartType.heartRate,
           ),
           _buildVitalsCardWithChart(
@@ -284,14 +276,14 @@ class _VitalsPageState extends State<VitalsPage> {
             icon: Icons.water_drop,
             color: Colors.blue,
             onAdd: _showAddGlucoseDialog,
-            history: widget.glucoseHistory,
+            history: glucoseHistory,
             type: VitalsChartType.glucose,
           ),
           const SizedBox(height: 16),
-          if (widget.bpHistory.isNotEmpty) ...[
+          if (bpHistory.isNotEmpty) ...[
              Text('Recent BP Log', style: Theme.of(context).textTheme.titleMedium),
              const SizedBox(height: 8),
-             ...widget.bpHistory.take(3).map((BloodPressureEntry e) => Card(
+             ...bpHistory.take(3).map((BloodPressureEntry e) => Card(
                margin: const EdgeInsets.only(bottom: 8),
                child: ListTile(
                  leading: const Icon(Icons.favorite, color: Colors.red, size: 20),
@@ -305,6 +297,7 @@ class _VitalsPageState extends State<VitalsPage> {
           ]
         ],
       ),
+    ),
     );
   }
 }

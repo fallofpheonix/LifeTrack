@@ -1,7 +1,7 @@
-import '../../../data/models/vitals/blood_pressure_entry.dart';
-import '../../../data/models/vitals/heart_rate_entry.dart';
-import '../../../data/models/vitals/glucose_entry.dart';
-import '../../../data/models/weight_entry.dart';
+import 'package:lifetrack/data/models/vitals/blood_pressure_entry.dart';
+import 'package:lifetrack/data/models/vitals/heart_rate_entry.dart';
+import 'package:lifetrack/data/models/vitals/glucose_entry.dart';
+import 'package:lifetrack/data/models/weight_entry.dart';
 
 abstract class VitalsRepository {
   // Blood Pressure

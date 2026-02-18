@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
 /// Prototype for Phase 9: Clinical Interaction Readiness
 /// A specialized view for healthcare providers.
@@ -53,7 +54,7 @@ class DoctorView extends StatelessWidget {
 class ClinicalExportService {
   Future<void> exportToFHIR() async {
     // TODO: Generate FHIR JSON Bundle
-    print('Exporting clinical data...');
+    HealthLog.i('ClinicalExportService', 'Export', 'Exporting clinical data...');
   }
   
   Future<void> exportToPDF() async {

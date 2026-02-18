@@ -1,44 +1,46 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pedometer/pedometer.dart';
 
-import '../../data/models/activity_log.dart';
-import '../../data/models/disease_info.dart';
-import '../../data/models/health_record_entry.dart';
-import '../../data/models/health_snapshot.dart';
-import '../../data/models/meal_entry.dart';
-import '../../data/models/medication/dose_log.dart';
-import '../../data/models/reminder_item.dart';
-import '../../data/models/scientist.dart';
-import '../../data/models/sleep_entry.dart';
-import '../../data/models/user_profile.dart';
-import '../../data/models/vitals/blood_pressure_entry.dart';
-import '../../data/models/vitals/heart_rate_entry.dart';
-import '../../data/models/vitals/glucose_entry.dart';
-import '../../data/models/weight_entry.dart';
-import '../../data/models/enums/sync_operation_type.dart';
-import '../../data/models/sync/sync_operation.dart'; // Add this import
-import '../../data/models/intelligence/insight.dart'; // Add this
-import '../../data/models/clinical/recovery_data_point.dart'; // Add this (if exists, or I create it)
-import '../../data/models/content/news_item.dart'; // Add this (if exists, or I create it)
-import '../../core/data/repository/vitals_repository.dart';
-import '../../core/data/repository/medication_repository.dart';
-import 'secure_serializer.dart';
-import 'user_session_service.dart';
-import 'sync_queue_service.dart';
-import 'sync_service.dart';
-import 'health_log.dart';
-import '../settings/ui_preferences.dart';
-import 'background_service.dart';
-import 'global_error_handler.dart';
-import 'data_governance_service.dart';
-import 'governance/export_policy.dart'; // For exportUserData
+import 'package:lifetrack/data/models/activity_log.dart';
+import 'package:lifetrack/data/models/disease_info.dart';
+import 'package:lifetrack/data/models/health_record_entry.dart';
+import 'package:lifetrack/data/models/health_snapshot.dart';
+import 'package:lifetrack/data/models/meal_entry.dart';
+import 'package:lifetrack/data/models/medication/dose_log.dart';
+import 'package:lifetrack/data/models/reminder_item.dart';
+import 'package:lifetrack/data/models/scientist.dart';
+import 'package:lifetrack/data/models/sleep_entry.dart';
+import 'package:lifetrack/data/models/user_profile.dart';
+import 'package:lifetrack/data/models/vitals/blood_pressure_entry.dart';
+import 'package:lifetrack/data/models/vitals/heart_rate_entry.dart';
+import 'package:lifetrack/data/models/vitals/glucose_entry.dart';
+import 'package:lifetrack/data/models/weight_entry.dart';
+import 'package:lifetrack/data/models/enums/sync_operation_type.dart';
+import 'package:lifetrack/data/models/sync/sync_operation.dart'; 
+import 'package:lifetrack/data/models/intelligence/insight.dart'; 
+import 'package:lifetrack/data/models/clinical/recovery_data_point.dart'; 
+import 'package:lifetrack/data/models/content/news_item.dart'; 
+import 'package:lifetrack/core/data/repository/vitals_repository.dart';
+import 'package:lifetrack/core/data/repository/medication_repository.dart';
+import 'package:lifetrack/core/services/secure_serializer.dart';
+import 'package:lifetrack/core/services/user_session_service.dart';
+import 'package:lifetrack/core/services/sync_queue_service.dart';
+import 'package:lifetrack/core/services/sync_service.dart';
+import 'package:lifetrack/core/services/health_log.dart';
+import 'package:lifetrack/core/settings/ui_preferences.dart';
+import 'package:lifetrack/core/services/background_service.dart';
+import 'package:lifetrack/core/services/intelligence/consistency_service.dart';
+import 'package:lifetrack/core/services/intelligence/plateau_service.dart';
+import 'package:lifetrack/core/services/intelligence/suggestion_service.dart';
+
+import 'package:lifetrack/core/services/data_governance_service.dart';
+import 'package:lifetrack/core/services/governance/export_policy.dart'; 
+import 'package:lifetrack/core/utils/date_utils.dart'; 
 
 // Const keys
 const String _snapshotKey = 'health_snapshot';
@@ -58,6 +60,9 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   final SyncQueueService syncQueue;
   final SyncService syncService;
   final DataGovernanceService governanceService;
+  final ConsistencyService consistencyService; 
+  final PlateauService plateauService; 
+  final SuggestionService suggestionService;
 
   // Data
   HealthSnapshot snapshot;
@@ -76,12 +81,14 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   List<MealEntry> _allMeals = [];
   List<SleepEntry> _allSleepLogs = [];
   List<HealthRecordEntry> _allRecords = [];
+  final List<Insight> _generatedInsights = []; // Real insights
   
   // Public Getters (Filter output deleted)
   List<ActivityLog> get activities => _allActivities.where((e) => e.deletedAt == null).toList();
   List<MealEntry> get meals => _allMeals.where((e) => e.deletedAt == null).toList();
   List<SleepEntry> get sleepLogs => _allSleepLogs.where((e) => e.deletedAt == null).toList();
   List<HealthRecordEntry> get records => _allRecords.where((e) => e.deletedAt == null).toList();
+  List<Insight> get insights => _generatedInsights;
 
   List<ReminderItem> reminders = [];
   
@@ -118,6 +125,9 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     required this.syncQueue,
     required this.syncService,
     required this.governanceService,
+    required this.consistencyService,
+    required this.plateauService,
+    required this.suggestionService,
     required this.snapshot,
     required this.userProfile,
   }) {
@@ -153,7 +163,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
         // For simplicity in Phase 5, just update if greater.
         // In real app, need daily reset logic.
         if (event.steps > snapshot.steps) {
-            snapshot.steps = event.steps;
+            snapshot = snapshot.copyWith(steps: event.steps);
             notifyListeners();
         }
       },
@@ -170,7 +180,52 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
       glucoseHistory = await vitalsRepo.getGlucose();
       // Dose logs?
       // doseLogs = await medicationRepo.getDoseLogs(); // Add this if needed
+      
+      _refreshInsights(); // Refresh insights whenever data loads
       notifyListeners();
+  }
+
+  void _refreshInsights() {
+     _generatedInsights.clear();
+     
+     // 1. Consistency
+     // Aggregate all log dates
+     final List<DateTime> allDates = [
+       ...weightHistory.map((e) => e.date),
+       ...bpHistory.map((e) => e.date),
+       ..._allRecords.map((e) => e.date),
+       ..._allActivities.map((e) => e.date),
+     ];
+     
+     final streak = consistencyService.calculateStreak(allDates);
+     if (streak > 2) {
+       _generatedInsights.add(Insight(
+         id: 'streak_1',
+         title: 'Consistent Logger!',
+         message: "You've logged data for $streak consecutive days. Keep it up!",
+         type: InsightType.success,
+         date: DateTime.now(),
+         confidence: 'High'
+       ));
+     }
+
+     // 2. Weight Plateau
+     final isPlateau = plateauService.detectWeightPlateau(weightHistory);
+     if (isPlateau) {
+        _generatedInsights.add(Insight(
+         id: 'plateau_1',
+         title: 'Weight Plateau Detected',
+         message: "Your weight has been stable for 2 weeks. Time to mix up your routine?",
+         type: InsightType.info,
+         date: DateTime.now(),
+         confidence: 'Medium',
+         actionLabel: 'View Workouts'
+       ));
+     }
+     
+     // 3. Suggestions
+     final suggestions = suggestionService.generateInsights(snapshot, userProfile);
+     _generatedInsights.addAll(suggestions);
   }
 
   static Future<LifeTrackStore> load(
@@ -218,6 +273,9 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
         syncQueue: syncQueue,
         syncService: syncService,
         governanceService: governanceService,
+        consistencyService: ConsistencyService(), 
+        plateauService: PlateauService(), 
+        suggestionService: SuggestionService(),
         snapshot: snapshot,
         userProfile: profile,
        );
@@ -240,8 +298,9 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
 
   // --- Actions ---
 
-  Future<void> addRecord(HealthRecordEntry record) async {
+  Future<void> addHealthRecord(HealthRecordEntry record) async {
     _allRecords.insert(0, record);
+    _refreshInsights();
     notifyListeners();
     await _persistRecords();
     await _enqueueSync(SyncOperationType.create, 'medical_record', record.id, record.toJson());
@@ -251,6 +310,8 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   // Activity
   Future<void> addActivity(ActivityLog log) async {
     _allActivities.insert(0, log);
+    _recalculateDailyTotals();
+    _refreshInsights();
     notifyListeners();
     await _persistActivities();
     await _enqueueSync(SyncOperationType.create, 'activity', log.id, log.toJson());
@@ -267,6 +328,8 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
          deletedAt: DateTime.now().toUtc(), entityVersion: old.entityVersion + 1
        );
        _allActivities[index] = updated;
+       _recalculateDailyTotals();
+       _refreshInsights();
        notifyListeners();
        await _persistActivities();
        await _enqueueSync(SyncOperationType.delete, 'activity', id, {});
@@ -276,6 +339,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   // Nutrition
   Future<void> addMeal(MealEntry entry) async {
     _allMeals.insert(0, entry);
+    _recalculateDailyTotals();
     notifyListeners();
     await _persistMeals();
     await _enqueueSync(SyncOperationType.create, 'meal', entry.id, entry.toJson());
@@ -297,6 +361,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
           entityVersion: old.entityVersion + 1
         );
        _allMeals[index] = updated;
+       _recalculateDailyTotals();
        notifyListeners();
        await _persistMeals();
        await _enqueueSync(SyncOperationType.delete, 'meal', id, {});
@@ -304,7 +369,8 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> addWaterGlass() async {
-    snapshot.waterGlasses++;
+    snapshot = snapshot.copyWith(waterGlasses: snapshot.waterGlasses + 1);
+    _refreshInsights();
     notifyListeners();
     await _persistSnapshot();
     await _enqueueSync(SyncOperationType.update, 'snapshot', 'daily_snapshot', snapshot.toJson());
@@ -312,7 +378,8 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> removeWaterGlass() async {
     if (snapshot.waterGlasses > 0) {
-      snapshot.waterGlasses--;
+      snapshot = snapshot.copyWith(waterGlasses: snapshot.waterGlasses - 1);
+      _refreshInsights();
       notifyListeners();
       await _persistSnapshot();
       await _enqueueSync(SyncOperationType.update, 'snapshot', 'daily_snapshot', snapshot.toJson());
@@ -363,31 +430,6 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  // Placeholders
-  List<Insight> get insights => [
-    Insight(
-      id: '1', 
-      title: "Activity Trend", 
-      message: "You're walking more than last week!", 
-      type: InsightType.success, 
-      date: DateTime.now()
-    ),
-    Insight(
-      id: '2', 
-      title: "Hydration", 
-      message: "Try to drink more water in the morning.", 
-      type: InsightType.info, 
-      date: DateTime.now()
-    ),
-    Insight(
-      id: '3', 
-      title: "Sleep Quality", 
-      message: "Sleep consistency is key to recovery.", 
-      type: InsightType.warning, 
-      date: DateTime.now()
-    ),
-  ];
-
   List<RecoveryDataPoint> get recoveryData => [
     RecoveryDataPoint(label: 'Recovery', value: '85%', status: 'Good'),
     RecoveryDataPoint(label: 'Strain', value: 'Low', status: 'Optimal'),
@@ -426,6 +468,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
             deletedAt: DateTime.now().toUtc(), entityVersion: old.entityVersion + 1
         );
         _allRecords[index] = updated;
+        _refreshInsights();
         notifyListeners();
         await _persistRecords();
         await _enqueueSync(SyncOperationType.delete, 'medical_record', id, {});
@@ -435,8 +478,8 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> addSleepLog(SleepEntry entry) async {
     _allSleepLogs.insert(0, entry);
     // Update snapshot logic (simplified)
-    if (_isToday(entry.endTime)) {
-       snapshot.sleepHours += entry.durationHours;
+    if (LifeTrackDateUtils.isToday(entry.endTime)) {
+       snapshot = snapshot.copyWith(sleepHours: snapshot.sleepHours + entry.durationHours);
     }
     notifyListeners();
     await _persistSleep();
@@ -448,8 +491,9 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     final index = _allSleepLogs.indexWhere((e) => e.id == id);
     if (index != -1) {
        final old = _allSleepLogs[index];
-       if (_isToday(old.endTime)) {
-           snapshot.sleepHours = (snapshot.sleepHours - old.durationHours).clamp(0.0, 24.0);
+       if (LifeTrackDateUtils.isToday(old.endTime)) {
+           final newSleep = (snapshot.sleepHours - old.durationHours).clamp(0.0, 24.0);
+           snapshot = snapshot.copyWith(sleepHours: newSleep);
        }
        final updated = SleepEntry(
          id: old.id, startTime: old.startTime, endTime: old.endTime,
@@ -467,7 +511,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> updateProfile(UserProfile profile, int newGoal) async {
     userProfile = profile;
-    snapshot.caloriesGoal = newGoal;
+    snapshot = snapshot.copyWith(caloriesGoal: newGoal);
     notifyListeners();
     await _persistProfile();
     await _persistSnapshot();
@@ -487,6 +531,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
      hrHistory.clear();
      glucoseHistory.clear();
      doseLogs.clear();
+     _generatedInsights.clear(); // Clear insights
      
      snapshot = HealthSnapshot.empty();
      
@@ -583,6 +628,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> deleteBP(String id) async {
       await vitalsRepo.deleteBP(id);
       bpHistory.removeWhere((e) => e.id == id); 
+      _refreshInsights();
       notifyListeners();
       await _enqueueSync(SyncOperationType.delete, 'blood_pressure', id, {});
   }
@@ -590,6 +636,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> deleteHeartRate(String id) async {
       await vitalsRepo.deleteHeartRate(id);
       hrHistory.removeWhere((e) => e.id == id);
+      _refreshInsights();
       notifyListeners();
       await _enqueueSync(SyncOperationType.delete, 'heart_rate', id, {});
   }
@@ -597,6 +644,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> deleteGlucose(String id) async {
       await vitalsRepo.deleteGlucose(id);
       glucoseHistory.removeWhere((e) => e.id == id);
+      _refreshInsights();
       notifyListeners();
       await _enqueueSync(SyncOperationType.delete, 'glucose', id, {});
   }
@@ -604,6 +652,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> deleteWeight(DateTime date) async {
       await vitalsRepo.deleteWeight(date);
       weightHistory.removeWhere((e) => _isSameDay(e.date, date)); 
+      _refreshInsights();
       notifyListeners();
       await _enqueueSync(SyncOperationType.delete, 'weight', date.toIso8601String(), {});
   }
@@ -618,6 +667,24 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   bool _isSameDay(DateTime a, DateTime b) {
       return a.year == b.year && a.month == b.month && a.day == b.day;
   }
+
+  void _recalculateDailyTotals() {
+     // 1. Calculate Calories Consumed
+     final todayMeals = _allMeals.where((e) => LifeTrackDateUtils.isToday(e.date) && e.deletedAt == null);
+     final consumed = todayMeals.fold<int>(0, (sum, e) => sum + e.calories);
+     // snapshot.caloriesConsumed = consumed; // Immutable update below
+
+     // 2. Calculate Calories Burned
+     final todayActivities = _allActivities.where((e) => LifeTrackDateUtils.isToday(e.date) && e.deletedAt == null);
+     final burned = todayActivities.fold<int>(0, (sum, e) => sum + e.caloriesBurned);
+     
+     snapshot = snapshot.copyWith(
+       caloriesConsumed: consumed,
+       caloriesBurned: burned,
+     );
+     
+     _persistSnapshot();
+  }
   
   // --- Data Governance ---
 
@@ -626,7 +693,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     
     // 1. Records
     final expiredRecords = _allRecords.where((r) => 
-      !governanceService.shouldRetain(r.createdAt ?? r.date, 'medical_record') && r.deletedAt == null
+      !governanceService.shouldRetain(r.createdAt, 'medical_record') && r.deletedAt == null
     ).toList();
     for (var r in expiredRecords) {
        await deleteRecord(r.id); 
@@ -635,22 +702,22 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     // 2. Vitals
     // Note: Iterating in-memory cache. 
     for (var e in weightHistory) {
-         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt ?? e.date, 'medical_record')) {
+         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt, 'medical_record')) {
             await deleteWeight(e.date);
          }
     }
     for (var e in bpHistory) {
-         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt ?? e.date, 'medical_record')) {
+         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt, 'medical_record')) {
             await deleteBP(e.id);
          }
     }
     for (var e in hrHistory) {
-         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt ?? e.date, 'medical_record')) {
+         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt, 'medical_record')) {
             await deleteHeartRate(e.id);
          }
     }
     for (var e in glucoseHistory) {
-         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt ?? e.date, 'medical_record')) {
+         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt, 'medical_record')) {
             await deleteGlucose(e.id);
          }
     }
@@ -659,15 +726,10 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     // Ensure we have them loaded
     final doses = await medicationRepo.getDoseLogs();
     for (var d in doses) {
-        if (d.deletedAt == null && !governanceService.shouldRetain(d.createdAt ?? d.scheduledTime, 'medical_record')) {
-            await deleteDoseLog(d.id); // Need to expose deleteDoseLog in Store or call repo directly? 
-            // Store has no deleteDoseLog usually. Let's call Repo but we need to sync?
-            // Repo.delete does soft delete but DOES NOT queue sync in Store unless Store wrapper does it.
-            // Current LifeTrackStore architecture wraps Vitals logic but might not wrap Meds logic fully yet?
-            // Let's checks if `deleteDoseLog` exists in Store. If not, we should probably add it or use repo + syncQueue manually.
-            // For now, calling repo directly. Sync might be missed if not hooked.
+        if (d.deletedAt == null && !governanceService.shouldRetain(d.createdAt, 'medical_record')) {
+            await deleteDoseLog(d.id); 
+            // ... (comments retained/simplified)
             await medicationRepo.deleteDoseLog(d.id);
-            // TODO: Enqueue sync if not handled by repo (Repo usually doesn't queue sync)
         }
     }
 
@@ -700,12 +762,5 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
      
      final policy = ExportPolicy(scope: ExportScope.full);
      return await governanceService.exportData(raw, policy: policy);
-  }
-
-
-  // Helpers
-  bool _isToday(DateTime d) {
-      final now = DateTime.now();
-      return d.year == now.year && d.month == now.month && d.day == now.day;
   }
 }

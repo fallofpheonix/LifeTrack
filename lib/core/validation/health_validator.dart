@@ -1,4 +1,4 @@
-import 'validation_result.dart';
+import 'package:lifetrack/core/validation/validation_result.dart';
 
 class HealthValidator {
   static ValidationResult validateBloodPressure(int? systolic, int? diastolic) {

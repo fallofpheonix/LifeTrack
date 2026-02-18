@@ -1,6 +1,6 @@
-import 'anonymization_policy.dart';
+import 'package:lifetrack/core/services/governance/anonymization_policy.dart';
 
-enum ExportScope { full, medical_only, logs_only, minimal }
+enum ExportScope { full, medicalOnly, logsOnly, minimal }
 
 class ExportPolicy {
   final ExportScope scope;
@@ -46,7 +46,7 @@ class ExportPolicy {
 
     final Map<String, dynamic> filtered = {};
 
-    if (scope == ExportScope.medical_only) {
+    if (scope == ExportScope.medicalOnly) {
       // Allowlist for medical data
       const allowed = {
         'snapshot', 'records', 'weight_history', 'bp_history', 

@@ -1,30 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui' as ui;
-import '../../data/models/user_profile.dart';
-import '../../data/models/weight_entry.dart';
-import '../settings/settings_page.dart';
+import 'package:lifetrack/core/ui/base_card.dart'; // Added import
+import 'package:lifetrack/data/models/user_profile.dart';
+import 'package:lifetrack/data/models/weight_entry.dart';
+import 'package:lifetrack/core/state/store_provider.dart';
+import 'package:lifetrack/features/settings/settings_page.dart';
+import 'package:lifetrack/core/ui/app_page_layout.dart';
 
-class ProfilePage extends StatefulWidget {
-  const ProfilePage({
-    super.key,
-    required this.userProfile,
-    required this.currentGoal,
-    required this.weightHistory,
-    required this.onUpdateProfile,
-    required this.onAddWeight,
-  });
-
-  final UserProfile userProfile;
-  final int currentGoal;
-  final List<WeightEntry> weightHistory;
-  final void Function(UserProfile, int) onUpdateProfile;
-  final void Function(WeightEntry) onAddWeight;
+class ProfilePage extends ConsumerStatefulWidget {
+  const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends ConsumerState<ProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _ageController;
   late TextEditingController _weightController;
@@ -36,13 +27,18 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.userProfile.name);
-    _ageController = TextEditingController(text: widget.userProfile.age.toString());
-    _weightController = TextEditingController(text: widget.userProfile.weight.toString());
-    _heightController = TextEditingController(text: widget.userProfile.height.toString());
-    _genderController = TextEditingController(text: widget.userProfile.gender);
-    _bloodController = TextEditingController(text: widget.userProfile.bloodType);
-    _goalController = TextEditingController(text: widget.currentGoal.toString());
+    // We can read the initial value securely here as long as provider is initialized.
+    final store = ref.read(lifeTrackStoreProvider);
+    final userProfile = store.userProfile;
+    final currentGoal = store.snapshot.caloriesGoal;
+
+    _nameController = TextEditingController(text: userProfile.name);
+    _ageController = TextEditingController(text: userProfile.age.toString());
+    _weightController = TextEditingController(text: userProfile.weight.toString());
+    _heightController = TextEditingController(text: userProfile.height.toString());
+    _genderController = TextEditingController(text: userProfile.gender);
+    _bloodController = TextEditingController(text: userProfile.bloodType);
+    _goalController = TextEditingController(text: currentGoal.toString());
   }
 
   @override
@@ -58,16 +54,24 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _save() {
+    final store = ref.read(lifeTrackStoreProvider);
+    final currentProfile = store.userProfile;
+
     final UserProfile newProfile = UserProfile(
+      id: currentProfile.id, // Preserve ID
       name: _nameController.text.trim(),
-      age: int.tryParse(_ageController.text) ?? widget.userProfile.age,
-      weight: double.tryParse(_weightController.text) ?? widget.userProfile.weight,
-      height: double.tryParse(_heightController.text) ?? widget.userProfile.height,
+      age: int.tryParse(_ageController.text) ?? currentProfile.age,
+      weight: double.tryParse(_weightController.text) ?? currentProfile.weight,
+      height: double.tryParse(_heightController.text) ?? currentProfile.height,
       gender: _genderController.text.trim(),
       bloodType: _bloodController.text.trim(),
+      // Preserve others
+      createdAt: currentProfile.createdAt,
+      updatedAt: DateTime.now(), 
     );
-    final int newGoal = int.tryParse(_goalController.text) ?? widget.currentGoal;
-    widget.onUpdateProfile(newProfile, newGoal);
+    final int newGoal = int.tryParse(_goalController.text) ?? store.snapshot.caloriesGoal;
+    
+    store.updateProfile(newProfile, newGoal);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated')));
   }
 
@@ -89,7 +93,7 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () {
               final double? val = double.tryParse(weightInputController.text);
               if (val != null) {
-                widget.onAddWeight(WeightEntry(date: DateTime.now().toUtc(), weightKg: val));
+                ref.read(lifeTrackStoreProvider).addWeightEntry(WeightEntry(date: DateTime.now().toUtc(), weightKg: val));
                 _weightController.text = val.toString(); // Sync with profile input
                 Navigator.pop(context);
               }
@@ -117,9 +121,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final double bmi = widget.userProfile.bmi;
-    final double bodyFat = widget.userProfile.bodyFatPercentage;
-    final int bmr = widget.userProfile.bmr;
+    final store = ref.watch(lifeTrackStoreProvider);
+    final userProfile = store.userProfile;
+    final weightHistory = store.weightHistory;
+    
+    final double bmi = userProfile.bmi;
+    final double bodyFat = userProfile.bodyFatPercentage;
+    final int bmr = userProfile.bmr;
 
     return Scaffold(
       appBar: AppBar(
@@ -137,17 +145,17 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
+      body: AppPageLayout(
+        child: ListView(
+          children: <Widget>[
           const CircleAvatar(
             radius: 40,
             child: Icon(Icons.person, size: 40),
           ),
           const SizedBox(height: 20),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+          BaseCard(
+            child: Padding( // BaseCard already has padding but custom child might want more or structure
+              padding: const EdgeInsets.all(0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -168,7 +176,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     width: double.infinity,
                     child: CustomPaint(
                       painter: WeightChartPainter(
-                        entries: widget.weightHistory,
+                        entries: weightHistory,
                         lineColor: Theme.of(context).colorScheme.primary,
                       ),
                     ),
@@ -180,9 +188,9 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           const SizedBox(height: 16),
-          Card(
+          BaseCard(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -292,6 +300,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -317,7 +326,7 @@ class WeightChartPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final Paint gridPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.2)
+      ..color = Colors.grey.withValues(alpha: 0.2)
       ..strokeWidth = 1.0;
 
     // Draw grid lines

@@ -1,6 +1,6 @@
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'health_log.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
 class AppVersionService {
   static const String _lastVersionKey = 'app_last_version';

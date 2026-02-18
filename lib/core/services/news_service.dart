@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
-import '../../data/models/content/news_item.dart';
+import 'package:lifetrack/data/models/content/news_item.dart';
 
 class NewsService {
   // ScienceDaily Medical Technology RSS

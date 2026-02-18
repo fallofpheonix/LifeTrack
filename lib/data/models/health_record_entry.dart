@@ -1,5 +1,5 @@
-import 'base_health_entry.dart';
-import 'enums/data_source.dart';
+import 'package:lifetrack/data/models/base_health_entry.dart';
+import 'package:lifetrack/data/models/enums/data_source.dart';
 
 class HealthRecordEntry extends BaseHealthEntry {
   HealthRecordEntry({
@@ -10,18 +10,13 @@ class HealthRecordEntry extends BaseHealthEntry {
     required this.note,
     this.attachmentPath,
     DateTime? date, // Derived from dateLabel usually, but precise date needed for sorting
-    DataSource source = DataSource.manual,
-    DateTime? createdAt,
-    DateTime? editedAt,
-    DateTime? deletedAt,
-    int entityVersion = 1,
+    super.source,
+    super.createdAt,
+    super.editedAt,
+    super.deletedAt,
+    super.entityVersion,
   }) : super(
           date: date ?? DateTime.tryParse(dateLabel) ?? DateTime.now(),
-          source: source,
-          createdAt: createdAt,
-          editedAt: editedAt,
-          deletedAt: deletedAt,
-          entityVersion: entityVersion,
         );
 
   final String id;

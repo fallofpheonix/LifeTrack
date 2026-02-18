@@ -1,6 +1,6 @@
-import '../base_health_entry.dart'; // Make sure this is here
-import '../enums/data_source.dart';
-import '../enums/frequency_type.dart';
+import 'package:lifetrack/data/models/base_health_entry.dart'; // Make sure this is here
+import 'package:lifetrack/data/models/enums/data_source.dart';
+import 'package:lifetrack/data/models/enums/frequency_type.dart';
 
 class Medication extends BaseHealthEntry {
   Medication({
@@ -10,18 +10,14 @@ class Medication extends BaseHealthEntry {
     required this.frequencyType,
     this.intervalHours, // For interval type
     required DateTime startDate,
-    DataSource source = DataSource.manual,
+    super.source,
     DateTime? createdAt,
-    DateTime? editedAt,
-    DateTime? deletedAt,
-    int entityVersion = 1,
+    super.editedAt,
+    super.deletedAt,
+    super.entityVersion,
   }) : super(
           date: startDate,
-          source: source,
           createdAt: createdAt ?? DateTime.now().toUtc(),
-          editedAt: editedAt,
-          deletedAt: deletedAt,
-          entityVersion: entityVersion,
         );
 
   final String id;

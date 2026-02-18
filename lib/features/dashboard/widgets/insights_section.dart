@@ -1,103 +1,95 @@
 import 'package:flutter/material.dart';
-import '../../../data/models/intelligence/insight.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lifetrack/core/state/insight_provider.dart';
+import 'package:lifetrack/data/models/intelligence/insight.dart';
+import 'package:lifetrack/core/ui/base_card.dart';
+import 'package:lifetrack/core/ui/section_header.dart';
+import 'package:lifetrack/core/ui/empty_state.dart';
 
-class InsightsSection extends StatelessWidget {
-  const InsightsSection({super.key, required this.insights});
-
-  final List<Insight> insights;
+class InsightsSection extends ConsumerWidget {
+  const InsightsSection({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    if (insights.isEmpty) return const SizedBox.shrink();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final insights = ref.watch(insightProvider);
+
+    if (insights.isEmpty) {
+      // Optional: Don't show anything if empty, or show a friendly empty state
+      // For now, let's just return a placeholder or empty SizedBox if distinct area
+      // User requested "SectionHeader" so let's include it.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+           const SectionHeader(title: 'Insights'),
+           const BaseCard(
+             child: EmptyState(
+               title: 'No insights yet',
+               icon: Icons.lightbulb_outline,
+               subtitle: 'Keep logging to unlock personalized feedback.',
+             ),
+           ),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(
-            'Health Insights',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-          ),
-        ),
-        SizedBox(
-          height: 140,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: insights.length,
-            itemBuilder: (context, index) {
-              return _InsightCard(insight: insights[index]);
-            },
-          ),
-        ),
+        const SectionHeader(title: 'Insights'),
+        ...insights.map((insight) => _InsightCard(insight: insight)),
       ],
     );
   }
 }
 
 class _InsightCard extends StatelessWidget {
-  const _InsightCard({required this.insight});
-
   final Insight insight;
+
+  const _InsightCard({required this.insight});
 
   @override
   Widget build(BuildContext context) {
-    final bool isSuccess = insight.type == InsightType.success;
-    final Color color = isSuccess ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0);
-    final Color iconColor = isSuccess ? Colors.green : Colors.orange;
-    final IconData icon = isSuccess ? Icons.check_circle_outline : Icons.info_outline;
+    // Determine color based on type/severity if available
+    // Assuming Insight has a type property
+    final Color color = insight.type == InsightType.alert ? Colors.red : Colors.blue;
+    final IconData icon = insight.type == InsightType.alert ? Icons.warning : Icons.info;
 
-    return Container(
-      width: 260,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: iconColor.withOpacity(0.3)),
-      ),
-      child: Column(
+    return BaseCard(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 20, color: iconColor),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  insight.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
+          Icon(icon, color: color),
+          const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              insight.message,
-              style: const TextStyle(fontSize: 12, height: 1.4),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  insight.title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(insight.message),
+                 if (insight.actionLabel != null) ...[
+                   const SizedBox(height: 8),
+                   GestureDetector(
+                     onTap: () {
+                       // TODO: Handle action
+                     },
+                     child: Text(
+                       insight.actionLabel!,
+                       style: TextStyle(
+                         color: Theme.of(context).colorScheme.primary,
+                         fontWeight: FontWeight.bold,
+                       ),
+                     ),
+                   ),
+                 ],
+              ],
             ),
           ),
-          if (insight.actionLabel != null)
-             Text(
-               insight.actionLabel!.toUpperCase(),
-               style: TextStyle(
-                 color: iconColor, 
-                 fontSize: 10, 
-                 fontWeight: FontWeight.bold
-               ),
-             ),
         ],
       ),
     );

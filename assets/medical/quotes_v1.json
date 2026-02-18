@@ -1,0 +1,24 @@
+{
+    "quotes": [
+        {
+            "text": "Aerobic activity improves glycemic control independent of weight loss.",
+            "linkedMetric": "activity"
+        },
+        {
+            "text": "Regular walking improves insulin sensitivity within 48 hours.",
+            "linkedMetric": "activity"
+        },
+        {
+            "text": "Adequate hydration is essential for kidney function and regulating body temperature.",
+            "linkedMetric": "hydration"
+        },
+        {
+            "text": "Dietary protein helps maintain muscle mass during weight loss.",
+            "linkedMetric": "nutrition"
+        },
+        {
+            "text": "Consistent sleep schedules regulate the circadian rhythm and improve sleep quality.",
+            "linkedMetric": "sleep"
+        }
+    ]
+}

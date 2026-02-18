@@ -1,13 +1,13 @@
-import 'health_log.dart';
-import 'governance/retention_policy.dart';
-import 'governance/export_policy.dart';
-import 'governance/anonymization_policy.dart';
+import 'package:lifetrack/core/services/health_log.dart';
+import 'package:lifetrack/core/services/governance/retention_policy.dart';
+import 'package:lifetrack/core/services/governance/export_policy.dart';
+import 'package:lifetrack/core/services/governance/anonymization_policy.dart';
 
 /// Service responsible for enforcing data governance policies.
 /// Delegates core logic to specific Policy objects.
 class DataGovernanceService {
   RetentionPolicy _retentionPolicy;
-  AnonymizationPolicy _anonymizationPolicy;
+  final AnonymizationPolicy _anonymizationPolicy;
 
   DataGovernanceService({
     RetentionPolicy? retentionPolicy,
@@ -32,7 +32,6 @@ class DataGovernanceService {
     
     // Inject the service's anonymization policy if the export policy requests one but doesn't have it set
     // This allows global anonymization rules to apply if not overridden
-    ExportPolicy effectivePolicy = policy;
     if (policy.anonymizationPolicy == null && _anonymizationPolicy.hashCode != 0) { // check existence
        // In a real app we might merge them, for now just use the passed one or default instructions
     }

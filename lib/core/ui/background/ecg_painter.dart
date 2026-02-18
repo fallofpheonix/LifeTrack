@@ -9,7 +9,7 @@ class EcgPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..color = const Color(0xFF00E5FF).withOpacity(0.15)
+      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.15)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 

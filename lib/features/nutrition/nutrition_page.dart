@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
-import '../../data/models/meal_entry.dart';
-import '../../core/utils/animated_fade_slide.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lifetrack/core/state/store_provider.dart';
+import 'package:lifetrack/core/ui/base_card.dart';
+import 'package:lifetrack/core/ui/empty_state.dart';
+import 'package:lifetrack/data/models/meal_entry.dart';
+import 'package:lifetrack/core/utils/animated_fade_slide.dart';
+import 'package:lifetrack/core/ui/app_page_layout.dart';
 
-class NutritionPage extends StatelessWidget {
-  const NutritionPage({
-    super.key,
-    required this.meals,
-    required this.onAddMeal,
-    required this.onDeleteMeal,
-  });
-
-  final List<MealEntry> meals;
-  final void Function(MealEntry meal) onAddMeal;
-  final void Function(String id) onDeleteMeal;
+class NutritionPage extends ConsumerWidget {
+  const NutritionPage({super.key});
 
   IconData _mealIcon(String mealType) {
+    // ... existing ...
     final String normalized = mealType.toLowerCase();
     if (normalized.contains('breakfast')) {
       return Icons.wb_sunny_outlined;
@@ -29,14 +26,16 @@ class NutritionPage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(lifeTrackStoreProvider);
+    final meals = store.meals;
     final int totalCalories = meals.fold<int>(0, (int sum, MealEntry item) => sum + item.calories);
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return AppPageLayout(
+      child: ListView(
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             Text('Nutrition', style: Theme.of(context).textTheme.titleLarge),
             FilledButton.icon(
@@ -48,11 +47,12 @@ class NutritionPage extends StatelessWidget {
                 if (result != null && result is Map<String, dynamic>) {
                    final MealEntry meal = MealEntry(
                      id: DateTime.now().microsecondsSinceEpoch.toString(),
-                     mealType: 'Snack', // Default or could be selected
+                     mealType: 'Snack',
                      title: result['title'] as String,
                      calories: result['calories'] as int,
+                     date: DateTime.now(),
                    );
-                   onAddMeal(meal);
+                   store.addMeal(meal);
                 }
               },
               icon: const Icon(Icons.add),
@@ -61,7 +61,7 @@ class NutritionPage extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Card(
+        BaseCard(
           child: ListTile(
             leading: const CircleAvatar(child: Icon(Icons.restaurant)),
             title: const Text('Daily Nutrition Overview'),
@@ -69,28 +69,35 @@ class NutritionPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        ...meals.asMap().entries.map((MapEntry<int, MealEntry> entry) {
-          final int index = entry.key;
-          final MealEntry meal = entry.value;
-          return AnimatedFadeSlide(
-            delay: Duration(milliseconds: 100 + (index * 45)),
-            child: Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: const Color(0xFFDFF2EC),
-                  child: Icon(_mealIcon(meal.mealType), color: const Color(0xFF1D8A6F)),
-                ),
-                title: Text('${meal.mealType}: ${meal.title}'),
-                subtitle: Text('${meal.calories} kcal'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                  onPressed: () => onDeleteMeal(meal.id),
+        if (meals.isEmpty)
+           const Padding(
+             padding: EdgeInsets.only(top: 40),
+             child: BaseCard(child: EmptyState(title: "No meals logged", icon: Icons.restaurant_menu)),
+           )
+        else
+          ...meals.asMap().entries.map((MapEntry<int, MealEntry> entry) {
+            final int index = entry.key;
+            final MealEntry meal = entry.value;
+            return AnimatedFadeSlide(
+              delay: Duration(milliseconds: 100 + (index * 45)),
+              child: BaseCard(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFFDFF2EC),
+                    child: Icon(_mealIcon(meal.mealType), color: const Color(0xFF1D8A6F)),
+                  ),
+                  title: Text('${meal.mealType}: ${meal.title}'),
+                  subtitle: Text('${meal.calories} kcal'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    onPressed: () => store.deleteMeal(meal.id),
+                  ),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
       ],
+      ),
     );
   }
 }

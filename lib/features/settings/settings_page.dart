@@ -1,35 +1,39 @@
+import 'package:lifetrack/core/ui/app_page_layout.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
-import '../../core/services/life_track_store.dart';
-import '../../core/services/data_governance_service.dart';
-import '../../core/services/health_log.dart';
-import '../../core/services/governance/export_policy.dart';
-import '../../core/services/governance/anonymization_policy.dart';
-import '../../core/settings/ui_preferences.dart';
-class SettingsPage extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart' as share_plus;
+import 'package:lifetrack/core/state/store_provider.dart';
+import 'package:lifetrack/core/services/life_track_store.dart';
+import 'package:lifetrack/core/services/data_governance_service.dart';
+import 'package:lifetrack/core/services/health_log.dart';
+import 'package:lifetrack/core/services/governance/export_policy.dart';
+import 'package:lifetrack/core/services/governance/anonymization_policy.dart';
+import 'package:lifetrack/core/settings/ui_preferences.dart';
+
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends ConsumerState<SettingsPage> {
   final DataGovernanceService _governanceService = DataGovernanceService();
   bool _isExporting = false;
 
   @override
   Widget build(BuildContext context) {
-    final LifeTrackStore store = Provider.of<LifeTrackStore>(context);
+    final LifeTrackStore store = ref.watch(lifeTrackStoreProvider);
     final ThemeMode currentTheme = store.themeMode;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
       ),
-      body: ListView(
-        children: <Widget>[
+      body: AppPageLayout(
+        child: ListView(
+          children: <Widget>[
           _buildSectionHeader('Appearance'),
           ListTile(
             title: const Text('Theme'),
@@ -108,6 +112,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -130,6 +135,8 @@ class _SettingsPageState extends State<SettingsPage> {
       // 1. Get all data
       final Map<String, dynamic> rawData = await store.exportAll();
 
+      if (!mounted) return;
+
       // 2. Ask for options
       final ExportPolicy? policy = await showDialog<ExportPolicy>(
         context: context,
@@ -145,7 +152,7 @@ class _SettingsPageState extends State<SettingsPage> {
               child: const Padding(padding: EdgeInsets.all(8), child: Text('Anonymized Export (Shareable)')),
             ),
             SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, ExportPolicy(scope: ExportScope.medical_only, anonymizationPolicy: null)),
+              onPressed: () => Navigator.pop(context, ExportPolicy(scope: ExportScope.medicalOnly, anonymizationPolicy: null)),
               child: const Padding(padding: EdgeInsets.all(8), child: Text('Medical Data Only')),
             ),
           ],
@@ -161,8 +168,9 @@ class _SettingsPageState extends State<SettingsPage> {
       final Map<String, dynamic> exportData = await _governanceService.exportData(rawData, policy: policy);
       final String jsonStr = jsonEncode(exportData);
 
-      // 4. Share
-      await Share.share(jsonStr, subject: 'LifeTrack Data Export');
+      // Using Share.share (Standard) - ignoring deprecation for now to ensure build compatibility
+      // ignore: deprecated_member_use
+      await share_plus.Share.share(jsonStr, subject: 'LifeTrack Data Export');
       HealthLog.i('SettingsPage', 'Export', 'Data exported successfully');
 
     } catch (e, stack) {

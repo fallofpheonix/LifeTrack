@@ -1,4 +1,4 @@
-enum InsightType { warning, success, info, critical }
+enum InsightType { warning, success, info, critical, alert }
 
 class Insight {
   final String id;

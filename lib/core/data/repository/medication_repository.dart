@@ -1,5 +1,5 @@
-import '../../../data/models/medication/medication.dart';
-import '../../../data/models/medication/dose_log.dart';
+import 'package:lifetrack/data/models/medication/medication.dart';
+import 'package:lifetrack/data/models/medication/dose_log.dart';
 
 abstract class MedicationRepository {
   // Medications

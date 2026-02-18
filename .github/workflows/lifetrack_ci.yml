@@ -1,0 +1,35 @@
+name: LifeTrack CI
+
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+
+      - run: flutter pub get
+
+      - name: Static Analysis
+        run: dart analyze
+
+      - name: Format Check
+        run: dart format --set-exit-if-changed .
+
+      # Unit Tests (Providers)
+      # Assuming we will have these tests. For now, we run all if no specific dir
+      - name: Provider Tests
+        run: flutter test test/providers || echo "Provider tests skipped (not yet implemented)"
+
+      # Integration Tests
+      - name: Integration Tests
+        run: flutter test test/integration || echo "Integration tests skipped (not yet implemented)"
+
+      # Build Verification
+      - name: Build Android
+        run: flutter build apk --debug

@@ -1,5 +1,8 @@
 /// Prototype for Phase 12: Platform Maturity
 /// Handles dynamic loading of feature plugins.
+library;
+
+import 'package:lifetrack/core/services/health_log.dart';
 
 abstract class LifeTrackPlugin {
   String get id;
@@ -13,7 +16,7 @@ class PluginManager {
   void register(LifeTrackPlugin plugin) {
     _plugins[plugin.id] = plugin;
     plugin.init();
-    print('Plugin registered: ${plugin.name}');
+    HealthLog.i('PluginManager', 'Register', 'Plugin registered: ${plugin.name}');
   }
 
   LifeTrackPlugin? getPlugin(String id) => _plugins[id];

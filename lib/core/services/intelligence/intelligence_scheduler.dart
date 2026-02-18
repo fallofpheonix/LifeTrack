@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'intelligence_coordinator.dart';
+import 'package:lifetrack/core/services/intelligence/intelligence_coordinator.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
 // Abstract interface for fetching data - in a real app this would be the Repositories
 
@@ -39,7 +40,7 @@ class IntelligenceScheduler {
       await _onRunAnalysis(_coordinator);
     } catch (e) {
       // Log error (HealthLog.error)
-      print('Intelligence Scheduler Error: $e');
+      HealthLog.e('IntelligenceScheduler', 'Run', 'Analysis failed', error: e);
     }
   }
 }

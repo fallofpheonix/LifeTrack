@@ -1,5 +1,5 @@
-import '../base_health_entry.dart';
-import '../enums/data_source.dart';
+import 'package:lifetrack/data/models/base_health_entry.dart';
+import 'package:lifetrack/data/models/enums/data_source.dart';
 
 enum GlucoseContext { fasting, postMeal, random }
 
@@ -8,20 +8,13 @@ class GlucoseEntry extends BaseHealthEntry {
     required this.id,
     required this.levelMgDl,
     required this.context,
-    required DateTime date,
-    DataSource source = DataSource.manual,
-    DateTime? createdAt,
-    DateTime? editedAt,
-    DateTime? deletedAt,
-    int entityVersion = 1,
-  }) : super(
-          date: date,
-          source: source,
-          createdAt: createdAt,
-          editedAt: editedAt,
-          deletedAt: deletedAt,
-          entityVersion: entityVersion,
-        );
+    required super.date,
+    super.source,
+    super.createdAt,
+    super.editedAt,
+    super.deletedAt,
+    super.entityVersion,
+  });
 
   final String id;
   final int levelMgDl; // STRICTLY mg/dL

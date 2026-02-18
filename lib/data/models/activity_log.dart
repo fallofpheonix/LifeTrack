@@ -1,6 +1,6 @@
-import 'base_health_entry.dart';
-import 'enums/data_source.dart';
-import 'activity_type.dart';
+import 'package:lifetrack/data/models/base_health_entry.dart';
+import 'package:lifetrack/data/models/enums/data_source.dart';
+import 'package:lifetrack/data/models/activity_type.dart';
 
 class ActivityLog extends BaseHealthEntry {
   ActivityLog({
@@ -9,23 +9,17 @@ class ActivityLog extends BaseHealthEntry {
     required this.name,
     required this.durationMinutes,
     required this.caloriesBurned,
-    required DateTime date,
-    DataSource source = DataSource.manual,
-    DateTime? createdAt,
-    DateTime? editedAt,
-    DateTime? deletedAt,
-    int entityVersion = 1,
-  }) : super(
-          date: date,
-          source: source,
-          createdAt: createdAt,
-          editedAt: editedAt,
-          deletedAt: deletedAt,
-          entityVersion: entityVersion,
-        );
+    required super.date,
+    super.source,
+    super.createdAt,
+    super.editedAt,
+    super.deletedAt,
+    super.entityVersion,
+  });
 
   final String id;
   final ActivityType type;
+  ActivityType get activityType => type; // Compatibility alias
   final String name;
   final int durationMinutes;
   final int caloriesBurned;

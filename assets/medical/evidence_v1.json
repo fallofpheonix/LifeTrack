@@ -1,0 +1,48 @@
+{
+    "version": "1.0.0",
+    "evidence": [
+        {
+            "id": "sleep_duration_cognition",
+            "relatedMetrics": [
+                "sleep"
+            ],
+            "statement": "7 to 9 hours of sleep is associated with improved executive function.",
+            "sourceType": "peer_reviewed",
+            "year": 2022,
+            "confidence": 0.91
+        },
+        {
+            "id": "walking_insulin",
+            "relatedMetrics": [
+                "activity",
+                "steps"
+            ],
+            "statement": "Regular walking improves insulin sensitivity within 48 hours.",
+            "sourceType": "clinical_trial",
+            "year": 2021,
+            "confidence": 0.89
+        },
+        {
+            "id": "hydration_cognition",
+            "relatedMetrics": [
+                "hydration",
+                "water"
+            ],
+            "statement": "Even mild dehydration (1-2%) can impair cognitive performance and mood.",
+            "sourceType": "meta_analysis",
+            "year": 2018,
+            "confidence": 0.95
+        },
+        {
+            "id": "fiber_satiety",
+            "relatedMetrics": [
+                "nutrition",
+                "calories"
+            ],
+            "statement": "Increased dietary fiber intake is strongly linked to higher satiety and lower body weight.",
+            "sourceType": "review",
+            "year": 2019,
+            "confidence": 0.93
+        }
+    ]
+}

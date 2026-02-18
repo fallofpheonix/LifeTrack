@@ -1,16 +1,16 @@
 import 'dart:convert';
-import 'dart:isolate';
-import '../../data/models/health_snapshot.dart';
-import '../../data/models/reminder_item.dart';
-import '../../data/models/health_record_entry.dart';
-import '../../data/models/user_profile.dart';
-import '../../data/models/sleep_entry.dart';
-import '../../data/models/meal_entry.dart';
-import '../../data/models/activity_log.dart';
-import '../../data/models/vitals/blood_pressure_entry.dart';
-import '../../data/models/vitals/heart_rate_entry.dart';
-import '../../data/models/vitals/glucose_entry.dart';
-import '../../data/models/weight_entry.dart';
+
+import 'package:lifetrack/data/models/health_snapshot.dart';
+import 'package:lifetrack/data/models/reminder_item.dart';
+import 'package:lifetrack/data/models/health_record_entry.dart';
+import 'package:lifetrack/data/models/user_profile.dart';
+import 'package:lifetrack/data/models/sleep_entry.dart';
+import 'package:lifetrack/data/models/meal_entry.dart';
+import 'package:lifetrack/data/models/activity_log.dart';
+import 'package:lifetrack/data/models/vitals/blood_pressure_entry.dart';
+import 'package:lifetrack/data/models/vitals/heart_rate_entry.dart';
+import 'package:lifetrack/data/models/vitals/glucose_entry.dart';
+import 'package:lifetrack/data/models/weight_entry.dart';
 
 /// Service responsible for offloading heavy tasks to background isolates.
 /// Currently runs on main thread for Phase 5, will be moved to isolates in Phase 5B.

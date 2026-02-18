@@ -1,50 +1,80 @@
 import 'package:flutter/material.dart';
-import '../../data/models/activity_log.dart';
-import '../../data/models/activity_type.dart';
-import '../../core/utils/animated_fade_slide.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lifetrack/core/state/store_provider.dart';
+import 'package:lifetrack/core/ui/base_card.dart';
+import 'package:lifetrack/core/ui/empty_state.dart';
+import 'package:lifetrack/data/models/activity_log.dart';
+import 'package:lifetrack/data/models/activity_type.dart';
+import 'package:lifetrack/core/utils/animated_fade_slide.dart';
+import 'package:lifetrack/core/ui/app_page_layout.dart';
 
-class ActivityPage extends StatelessWidget {
-  const ActivityPage({
-    super.key,
-    required this.activities,
-    required this.onLogActivity,
-    required this.onDeleteActivity,
-  });
-
-  final List<ActivityLog> activities;
-  final VoidCallback onLogActivity;
-  final void Function(String id) onDeleteActivity;
+class ActivityPage extends ConsumerWidget {
+  const ActivityPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: <Widget>[
-        Text('Movement', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        Row(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(lifeTrackStoreProvider);
+    final activities = store.activities;
+
+    return AppPageLayout(
+      child: ListView(
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            Text('Today\'s Activity', style: Theme.of(context).textTheme.titleLarge),
-            const Spacer(),
+            Text('Movement', style: Theme.of(context).textTheme.titleLarge),
             FilledButton.icon(
-              onPressed: onLogActivity,
+              onPressed: () async {
+                  final result = await showDialog(
+                    context: context,
+                    builder: (context) => const AddActivityDialog(),
+                  );
+                  if (result != null && result is Map) {
+                     final ActivityLog log = ActivityLog(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        type: result['type'] as ActivityType, 
+                        name: (result['type'] as ActivityType).displayName,
+                        durationMinutes: result['duration'],
+                        caloriesBurned: result['calories'],
+                        date: DateTime.now(),
+                     );
+                     store.addActivity(log);
+                  }
+              },
               icon: const Icon(Icons.add),
               label: const Text('Log Activity'),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        ...activities.asMap().entries.map((MapEntry<int, ActivityLog> entry) {
-          final int index = entry.key;
-          final ActivityLog activity = entry.value;
-          return AnimatedFadeSlide(
-            delay: Duration(milliseconds: 120 + (index * 50)),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
+        if (activities.isEmpty)
+           const Padding(
+             padding: EdgeInsets.only(top: 40),
+             child: BaseCard(child: EmptyState(title: "No activity today", icon: Icons.directions_run)),
+           )
+        else
+          ...activities.asMap().entries.map((MapEntry<int, ActivityLog> entry) {
+            final int index = entry.key;
+            final ActivityLog activity = entry.value;
+            // Helper to get icon from type name
+            IconData icon = Icons.fitness_center;
+            try {
+               // Use the type directly from the model
+               final type = activity.activityType;
+               icon = type.icon;
+            } catch (e) {
+               // Fallback
+            }
+
+            return AnimatedFadeSlide(
+              delay: Duration(milliseconds: 120 + (index * 50)),
+              child: BaseCard(
                 child: Row(
                   children: <Widget>[
-                    const CircleAvatar(child: Icon(Icons.fitness_center)),
+                    CircleAvatar(
+                      backgroundColor: Colors.orange.withValues(alpha: 0.1),
+                      child: Icon(icon, color: Colors.orange),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -54,7 +84,7 @@ class ActivityPage extends StatelessWidget {
                           const SizedBox(height: 2),
                           Row(
                             children: <Widget>[
-                               Icon(activity.type.icon, size: 14, color: Colors.grey),
+                               Icon(icon, size: 14, color: Colors.grey),
                                const SizedBox(width: 4),
                                Text('${activity.durationMinutes} min'),
                             ],
@@ -78,15 +108,15 @@ class ActivityPage extends StatelessWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
-                      onPressed: () => onDeleteActivity(activity.id),
+                      onPressed: () => store.deleteActivity(activity.id),
                     ),
                   ],
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
       ],
+      ),
     );
   }
 }
@@ -110,7 +140,7 @@ class _AddActivityDialogState extends State<AddActivityDialog> {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           DropdownButtonFormField<ActivityType>(
-            value: _selectedType,
+            initialValue: _selectedType,
             decoration: const InputDecoration(labelText: 'Activity Type'),
             items: ActivityType.values.map((ActivityType type) {
               return DropdownMenuItem<ActivityType>(
@@ -153,72 +183,6 @@ class _AddActivityDialogState extends State<AddActivityDialog> {
                 'calories': calories,
               });
             }
-          },
-          child: const Text('Save'),
-        ),
-      ],
-    );
-  }
-}
-
-class SleepLogDialog extends StatefulWidget {
-  const SleepLogDialog({super.key});
-
-  @override
-  State<SleepLogDialog> createState() => _SleepLogDialogState();
-}
-
-class _SleepLogDialogState extends State<SleepLogDialog> {
-  DateTime _start = DateTime.now().subtract(const Duration(hours: 8));
-  DateTime _end = DateTime.now();
-
-  Future<void> _pickTime(bool isStart) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(isStart ? _start : _end),
-    );
-    if (picked != null) {
-      setState(() {
-        final DateTime base = isStart ? _start : _end;
-        final DateTime newTime = DateTime(base.year, base.month, base.day, picked.hour, picked.minute);
-        if (isStart) {
-          _start = newTime;
-        } else {
-          _end = newTime;
-        }
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Duration diff = _end.difference(_start);
-    final String duration = '${diff.inHours}h ${diff.inMinutes % 60}m';
-
-    return AlertDialog(
-      title: const Text('Log Sleep'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          ListTile(
-            title: const Text('Bedtime'),
-            trailing: Text(TimeOfDay.fromDateTime(_start).format(context)),
-            onTap: () => _pickTime(true),
-          ),
-          ListTile(
-            title: const Text('Wake up'),
-            trailing: Text(TimeOfDay.fromDateTime(_end).format(context)),
-            onTap: () => _pickTime(false),
-          ),
-          const SizedBox(height: 10),
-          Text('Duration: $duration', style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
-      actions: <Widget>[
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(
-          onPressed: () {
-            Navigator.pop(context, <String, dynamic>{'start': _start, 'end': _end});
           },
           child: const Text('Save'),
         ),

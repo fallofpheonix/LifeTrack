@@ -1,6 +1,6 @@
 import 'dart:async';
-import '../data/repository/auth_repository.dart';
-import '../data/local/local_token_store.dart';
+import 'package:lifetrack/core/data/repository/auth_repository.dart';
+import 'package:lifetrack/core/data/local/local_token_store.dart';
 
 class UserSessionService {
   final AuthRepository _authRepository;

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-02-18
+
+### Added
+- **Education Layer**: Dedicated tab for medical conditions, evidence-based research, and scientist profiles.
+- **Intelligence Layer**:
+  - `ConsistencyService` to track logging streaks.
+  - `PlateauService` to detect weight stagnation.
+  - `SuggestionService` for personalized health tips.
+- **Cloud Sync (Beta)**:
+  - Offline-first architecture with `SyncQueueService`.
+  - Conflict resolution strategies using entity versioning.
+- **Data Governance**:
+  - Retention policies for medical records.
+  - User data export functionality.
+- **Security**:
+  - Local data encryption using `flutter_secure_storage` and `encrypt` packages.
+
 ## [1.0.0] - 2026-02-17
 
 ### Added

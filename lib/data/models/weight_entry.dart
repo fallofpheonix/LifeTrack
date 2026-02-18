@@ -1,23 +1,16 @@
-import 'base_health_entry.dart';
-import 'enums/data_source.dart';
+import 'package:lifetrack/data/models/base_health_entry.dart';
+import 'package:lifetrack/data/models/enums/data_source.dart';
 
 class WeightEntry extends BaseHealthEntry {
   WeightEntry({
-    required DateTime date,
+    required super.date,
     required this.weightKg,
-    DataSource source = DataSource.manual,
-    DateTime? createdAt,
-    DateTime? editedAt,
-    DateTime? deletedAt,
-    int entityVersion = 1,
-  }) : super(
-          date: date,
-          source: source,
-          createdAt: createdAt,
-          editedAt: editedAt,
-          deletedAt: deletedAt,
-          entityVersion: entityVersion,
-        );
+    super.source,
+    super.createdAt,
+    super.editedAt,
+    super.deletedAt,
+    super.entityVersion,
+  });
 
 
   final double weightKg;

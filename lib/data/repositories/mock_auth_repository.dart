@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:uuid/uuid.dart';
-import '../../core/data/repository/auth_repository.dart';
-import '../../core/data/local/local_token_store.dart';
+import 'package:lifetrack/core/data/repository/auth_repository.dart';
+import 'package:lifetrack/core/data/local/local_token_store.dart';
 
 class MockAuthRepository implements AuthRepository {
   final LocalTokenStore _tokenStore;

@@ -1,6 +1,7 @@
 /// Prototype for Phase 7: Device & Sensor Integration
 /// This service abstracts the connection to on-device health platforms like
 /// Google Fit (Android) and Apple Health (iOS).
+library;
 
 abstract class HealthDataProvider {
   Future<bool> requestPermissions();

@@ -1,45 +1,52 @@
-import 'dart:math';
-import '../../../data/models/vitals/blood_pressure_entry.dart';
-import '../../../data/models/weight_entry.dart';
+import 'package:lifetrack/data/models/weight_entry.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
 class PlateauService {
-  
-  /// Checks if weight has stagnated (variance < threshold) over the last 14 days.
-  /// Returns true if plateau detected.
-  bool detectWeightPlateau(List<WeightEntry> entries, {double varianceThreshold = 0.5}) {
-    if (entries.length < 5) return false; // Need enough data points
+  static const int _plateauThresholdDays = 14;
+  static const double _weightToleranceKg = 0.5;
+
+  /// Checks if weight has plateaued over the last [days] (default 14).
+  /// A plateau is defined as variance within [tolerance] over the period.
+  bool detectWeightPlateau(List<WeightEntry> history, {int days = _plateauThresholdDays, double tolerance = _weightToleranceKg}) {
+    if (history.length < 3) return false; // Need enough data points
 
     final now = DateTime.now();
-    final fourteenDaysAgo = now.subtract(const Duration(days: 14));
+    final cutoff = now.subtract(Duration(days: days));
     
-    final recentEntries = entries.where((e) => e.date.isAfter(fourteenDaysAgo)).toList();
-    if (recentEntries.length < 3) return false;
+    // Get entries for the period, sorted by date asc
 
-    // Calculate variance
-    final weights = recentEntries.map((e) => e.weightKg).toList();
-    final mean = weights.reduce((a, b) => a + b) / weights.length;
+    // Get entries for the period, sorted by date asc
+
+    final List<WeightEntry> recent = [];
+    for (final e in history) {
+        if (e.date.isAfter(cutoff)) {
+            recent.add(e);
+        }
+    }
+
+    recent.sort((WeightEntry a, WeightEntry b) => a.date.compareTo(b.date));
+
+    if (recent.length < 3) return false; // Not enough separate logs in period
+
+    // Check time span cover - must cover substantial part of the window?
+    // Or just "if recent entries are flat". Let's assume recent entries being flat is enough.
     
-    final sumSquaredDiffs = weights.map((w) => pow(w - mean, 2)).reduce((a, b) => a + b);
-    final variance = sumSquaredDiffs / weights.length;
 
-    return variance < varianceThreshold;
-  }
-
-  /// Checks if BP has stabilized (variance < threshold) over the last 14 days.
-  bool detectBPPlateau(List<BloodPressureEntry> entries, {double varianceThreshold = 5.0}) {
-    if (entries.length < 5) return false;
-
-    final now = DateTime.now();
-    final fourteenDaysAgo = now.subtract(const Duration(days: 14));
+    double minWeight = double.infinity;
+    double maxWeight = double.negativeInfinity;
     
-    final recentEntries = entries.where((e) => e.date.isAfter(fourteenDaysAgo)).toList();
-    if (recentEntries.length < 3) return false;
+    for (final entry in recent) {
+        if (entry.weightKg < minWeight) minWeight = entry.weightKg;
+        if (entry.weightKg > maxWeight) maxWeight = entry.weightKg;
+    }
 
-    // Check Systolic Variance
-    final systolics = recentEntries.map((e) => e.systolic).toList();
-    final meanSys = systolics.reduce((a, b) => a + b) / systolics.length;
-    final sysVariance = systolics.map((s) => pow(s - meanSys, 2)).reduce((a, b) => a + b) / systolics.length;
+    final variance = maxWeight - minWeight;
 
-    return sysVariance < varianceThreshold;
+    if (variance <= tolerance) {
+      HealthLog.i('PlateauService', 'Weight', 'Plateau detected. Variance: \${variance}kg over \${recent.length} entries');
+      return true;
+    }
+    
+    return false;
   }
 }

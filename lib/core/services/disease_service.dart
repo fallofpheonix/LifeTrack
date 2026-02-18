@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../../data/models/disease_info.dart';
+import 'package:lifetrack/data/models/disease_info.dart';
 
 class DiseaseService {
   Future<DiseaseInfo?> fetchDiseaseFromWiki(String query) async {

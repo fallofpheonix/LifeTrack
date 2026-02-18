@@ -1,4 +1,4 @@
-import 'health_log.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
 enum ResolutionPolicy { serverWins, clientWins, manualMerge }
 

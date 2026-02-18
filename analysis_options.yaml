@@ -21,8 +21,26 @@ linter:
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
-
+    # Stronger lints for Clean Architecture
+    always_use_package_imports: true
+    avoid_print: true
+    avoid_empty_else: true
+    cancel_subscriptions: true
+    close_sinks: true
+    comment_references: true
+    control_flow_in_finally: true
+    empty_statements: true
+    hash_and_equals: true
+    implementation_imports: true
+    library_names: true
+    package_api_docs: true
+    recursive_getters: true
+    test_types_in_equals: true
+    throw_in_finally: true
+    unnecessary_brace_in_string_interps: true
+    unnecessary_getters_setters: true
+    unnecessary_new: true
+    unnecessary_statements: true
+    valid_regexps: true
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

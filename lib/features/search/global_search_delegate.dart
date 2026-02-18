@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/services/life_track_store.dart';
-import '../../data/models/disease_info.dart';
-import '../../data/models/health_record_entry.dart';
-import '../../data/models/scientist.dart';
+import 'package:lifetrack/core/services/life_track_store.dart';
+import 'package:lifetrack/data/models/disease_info.dart';
+import 'package:lifetrack/data/models/health_record_entry.dart';
+import 'package:lifetrack/data/models/scientist.dart';
 
 class GlobalSearchDelegate extends SearchDelegate {
   final LifeTrackStore store;
@@ -111,7 +111,7 @@ class GlobalSearchDelegate extends SearchDelegate {
   Widget _buildHeader(BuildContext context, String title) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
       child: Text(
         title,
         style: TextStyle(

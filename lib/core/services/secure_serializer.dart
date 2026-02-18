@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'encryption_service.dart';
+import 'package:lifetrack/core/services/encryption_service.dart';
 
 class SecureSerializer {
   final EncryptionService _encryptionService;

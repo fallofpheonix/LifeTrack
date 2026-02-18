@@ -1,9 +1,9 @@
 import 'dart:async';
  
-import 'sync_queue_service.dart';
-import '../../data/models/sync/sync_operation.dart';
-import 'mock_backend.dart';
-import 'health_log.dart';
+import 'package:lifetrack/core/services/sync_queue_service.dart';
+import 'package:lifetrack/data/models/sync/sync_operation.dart';
+import 'package:lifetrack/core/services/mock_backend.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
 class SyncService {
   final SyncQueueService _queueService;

@@ -1,5 +1,6 @@
 /// Prototype for Phase 11: Controlled AI Augmentation
 /// Provides a safety layer for generating natural language insights.
+library;
 
 class AIInsightService {
   /// Generates a human-readable summary of the health snapshot.

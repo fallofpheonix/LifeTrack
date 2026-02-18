@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../settings/ui_preferences.dart';
-import 'ecg_painter.dart';
+import 'package:lifetrack/core/settings/ui_preferences.dart';
+import 'package:lifetrack/core/ui/background/ecg_painter.dart';
 
 class AnimatedHealthBackground extends StatefulWidget {
   const AnimatedHealthBackground({super.key});
@@ -33,7 +33,7 @@ class _AnimatedHealthBackgroundState extends State<AnimatedHealthBackground>
       child: RepaintBoundary(
         child: AnimatedBuilder(
           animation: _controller,
-          builder: (_, __) {
+          builder: (context, child) {
             return CustomPaint(
               painter: EcgPainter(_controller.value),
               size: Size.infinite,

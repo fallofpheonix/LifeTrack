@@ -1,4 +1,4 @@
-import '../enums/data_source.dart';
+import 'package:lifetrack/data/models/enums/data_source.dart';
 
 mixin AuditFieldsMixin {
   DateTime get createdAt;

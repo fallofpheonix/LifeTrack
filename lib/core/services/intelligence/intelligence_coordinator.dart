@@ -1,10 +1,12 @@
-import '../../../data/models/intelligence/insight.dart';
-import '../../../data/models/base_health_entry.dart';
-import '../../../data/models/sleep_entry.dart';
-import '../../../data/models/weight_entry.dart';
-import 'consistency_service.dart';
-import 'plateau_service.dart';
-import 'suggestion_service.dart';
+import 'package:lifetrack/data/models/intelligence/insight.dart';
+import 'package:lifetrack/data/models/base_health_entry.dart';
+import 'package:lifetrack/data/models/sleep_entry.dart';
+import 'package:lifetrack/data/models/weight_entry.dart';
+import 'package:lifetrack/data/models/health_snapshot.dart'; // Added
+import 'package:lifetrack/data/models/user_profile.dart';   // Added
+import 'package:lifetrack/core/services/intelligence/consistency_service.dart';
+import 'package:lifetrack/core/services/intelligence/plateau_service.dart';
+import 'package:lifetrack/core/services/intelligence/suggestion_service.dart';
 
 class IntelligenceCoordinator {
   final ConsistencyService _consistencyService;
@@ -21,16 +23,23 @@ class IntelligenceCoordinator {
 
   Future<List<Insight>> runAnalysis({
     required List<BaseHealthEntry> allEntries,
+    required HealthSnapshot snapshot,
+    required UserProfile profile,
     List<SleepEntry>? sleepEntries,
     List<WeightEntry>? weightEntries,
   }) async {
     final insights = <Insight>[];
 
     // 1. Consistency
-    final consistencyScore = _consistencyService.calculateConsistencyScore(allEntries);
+    // 1. Consistency
+    final allDates = allEntries.map((e) => e.date).toList();
+    final consistencyScore = _consistencyService.calculateConsistencyScore(allDates);
     
     // 2. Suggestions (includes Consistency insights)
+    // 2. Suggestions (includes Consistency insights)
     insights.addAll(_suggestionService.generateSuggestions(
+      snapshot,
+      profile,
       sleepEntries: sleepEntries,
       consistencyScore: consistencyScore,
     ));

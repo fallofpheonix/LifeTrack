@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/data/repository/vitals_repository.dart';
-import '../models/vitals/blood_pressure_entry.dart';
-import '../models/vitals/heart_rate_entry.dart';
-import '../models/vitals/glucose_entry.dart';
-import '../models/weight_entry.dart';
-import '../../core/services/background_service.dart';
+import 'package:lifetrack/core/data/repository/vitals_repository.dart';
+import 'package:lifetrack/data/models/vitals/blood_pressure_entry.dart';
+import 'package:lifetrack/data/models/vitals/heart_rate_entry.dart';
+import 'package:lifetrack/data/models/vitals/glucose_entry.dart';
+import 'package:lifetrack/data/models/weight_entry.dart';
+import 'package:lifetrack/core/services/background_service.dart';
 
 class LocalVitalsRepository implements VitalsRepository {
   static const String _bpKey = 'lifetrack_bp_v2'; // v2 for clean schema

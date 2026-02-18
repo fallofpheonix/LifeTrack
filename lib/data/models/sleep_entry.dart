@@ -1,23 +1,18 @@
-import 'base_health_entry.dart';
-import 'enums/data_source.dart';
+import 'package:lifetrack/data/models/base_health_entry.dart';
+import 'package:lifetrack/data/models/enums/data_source.dart';
 
 class SleepEntry extends BaseHealthEntry {
   SleepEntry({
     required this.id,
     required this.startTime,
     required this.endTime,
-    DataSource source = DataSource.manual,
-    DateTime? createdAt,
-    DateTime? editedAt,
-    DateTime? deletedAt,
-    int entityVersion = 1,
+    super.source,
+    super.createdAt,
+    super.editedAt,
+    super.deletedAt,
+    super.entityVersion,
   }) : super(
           date: startTime,
-          source: source,
-          createdAt: createdAt,
-          editedAt: editedAt,
-          deletedAt: deletedAt,
-          entityVersion: entityVersion,
         );
 
   final String id;

@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/data/repository/medication_repository.dart';
-import '../../../data/models/medication/medication.dart';
-import '../../../data/models/medication/dose_log.dart';
+import 'package:lifetrack/core/data/repository/medication_repository.dart';
+import 'package:lifetrack/data/models/medication/medication.dart';
+import 'package:lifetrack/data/models/medication/dose_log.dart';
 
 class LocalMedicationRepository implements MedicationRepository {
   static const String _medsKey = 'lifetrack_meds_v1';

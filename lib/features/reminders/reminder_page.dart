@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../data/models/reminder_item.dart';
-import '../../core/utils/animated_fade_slide.dart';
+import 'package:lifetrack/data/models/reminder_item.dart';
+import 'package:lifetrack/core/utils/animated_fade_slide.dart';
 
 class ReminderPage extends StatelessWidget {
   const ReminderPage({

@@ -1,32 +1,34 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
-import 'core/theme/app_theme.dart';
-import 'core/services/life_track_store.dart';
-import 'core/storage/schema_service.dart';
-import 'core/settings/ui_preferences.dart';
-import 'core/ui/background/animated_health_background.dart';
-import 'features/dashboard/home_page.dart';
-import 'data/repositories/local_vitals_repository.dart';
-import 'data/repositories/local_medication_repository.dart';
-import 'data/repositories/mock_auth_repository.dart';
-import 'core/data/repository/auth_repository.dart';
-import 'core/data/local/local_token_store.dart';
-import 'core/services/user_session_service.dart';
-import 'core/services/global_error_handler.dart';
-import 'core/services/health_log.dart';
+import 'package:lifetrack/core/theme/app_theme.dart';
+import 'package:lifetrack/core/services/life_track_store.dart';
+import 'package:lifetrack/core/state/store_provider.dart';
+import 'package:lifetrack/core/storage/schema_service.dart';
+import 'package:lifetrack/core/settings/ui_preferences.dart';
+import 'package:lifetrack/core/ui/background/animated_health_background.dart';
+import 'package:lifetrack/app/app_shell.dart';
+import 'package:lifetrack/data/repositories/local_vitals_repository.dart';
+import 'package:lifetrack/data/repositories/local_medication_repository.dart';
+import 'package:lifetrack/data/repositories/mock_auth_repository.dart';
+import 'package:lifetrack/core/data/repository/auth_repository.dart';
+import 'package:lifetrack/core/data/local/local_token_store.dart';
+import 'package:lifetrack/core/services/user_session_service.dart';
+import 'package:lifetrack/core/services/global_error_handler.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
-import 'core/services/key_manager.dart';
-import 'core/services/encryption_service.dart';
-import 'core/services/secure_serializer.dart';
-import 'core/services/sync_queue_service.dart';
-import 'core/services/mock_backend.dart';
-import 'core/services/sync_service.dart';
-import 'core/services/data_governance_service.dart';
+import 'package:lifetrack/core/services/key_manager.dart';
+import 'package:lifetrack/core/services/encryption_service.dart';
+import 'package:lifetrack/core/services/secure_serializer.dart';
+import 'package:lifetrack/core/services/sync_queue_service.dart';
+import 'package:lifetrack/core/services/mock_backend.dart';
+import 'package:lifetrack/core/services/sync_service.dart';
+import 'package:lifetrack/core/services/data_governance_service.dart';
+
+
 
 void main() async {
   runZonedGuarded<Future<void>>(() async {
@@ -38,11 +40,7 @@ void main() async {
       HealthLog.e('Main', 'FlutterError', 'Framework Error', error: details.exception, stackTrace: details.stack);
     };
 
-    // 2. Platform/Engine Errors
-    PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-      HealthLog.e('Main', 'PlatformError', 'Uncaught Platform Error', error: error, stackTrace: stack);
-      return true; // Handled
-    };
+
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -79,8 +77,13 @@ void main() async {
       tokenStore: tokenStore,
     );
 
+
     // Data Governance
     final DataGovernanceService governanceService = DataGovernanceService();
+    
+
+    // Intelligence Layer
+
 
     // Load Store with Repositories
     final LifeTrackStore store = await LifeTrackStore.load(
@@ -94,8 +97,10 @@ void main() async {
     );
 
     runApp(
-      ChangeNotifierProvider<LifeTrackStore>(
-        create: (BuildContext context) => store,
+      ProviderScope(
+        overrides: [
+          lifeTrackStoreProvider.overrideWithValue(store),
+        ],
         child: const LifeTrackApp(),
       ),
     );
@@ -104,12 +109,13 @@ void main() async {
   });
 }
 
-class LifeTrackApp extends StatelessWidget {
+class LifeTrackApp extends ConsumerWidget {
   const LifeTrackApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final LifeTrackStore store = Provider.of<LifeTrackStore>(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(lifeTrackStoreProvider).themeMode;
+    // We can also watch themeMode from settings if we want reactive changes
     
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -118,31 +124,14 @@ class LifeTrackApp extends StatelessWidget {
           const AnimatedHealthBackground(), // Global background layer
           MaterialApp(
             title: 'LifeTrack',
-            theme: ThemeData(
-              useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF1D8A6F),
-                brightness: Brightness.light, 
-              ),
-              scaffoldBackgroundColor: Colors.transparent, // Crucial for background visibility
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                centerTitle: false,
-                titleTextStyle: TextStyle(
-                  color: Color(0xFF191C1E),
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-                iconTheme: IconThemeData(color: Color(0xFF191C1E)),
-              ),
-               // We can keep text theme defaults or override as needed
+            theme: AppTheme.lightTheme.copyWith(
+               scaffoldBackgroundColor: Colors.transparent, // Crucial for background visibility
             ),
             darkTheme: AppTheme.darkTheme.copyWith(
                scaffoldBackgroundColor: Colors.transparent, // Crucial for background visibility
             ),
-            themeMode: store.themeMode,
-            home: LifeTrackHomePage(store: store),
+            themeMode: themeMode,
+            home: const AppShell(),
             debugShowCheckedModeBanner: false,
           ),
         ],

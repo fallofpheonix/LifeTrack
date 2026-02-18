@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../data/models/sync/sync_operation.dart';
-import '../../data/models/enums/sync_operation_type.dart';
-import 'health_log.dart';
+import 'package:lifetrack/data/models/sync/sync_operation.dart';
+import 'package:lifetrack/data/models/enums/sync_operation_type.dart';
+import 'package:lifetrack/core/services/health_log.dart';
 
 class SyncQueueService {
   static const String _queueKey = 'lifetrack_sync_queue';

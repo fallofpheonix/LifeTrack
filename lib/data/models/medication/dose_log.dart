@@ -1,5 +1,5 @@
-import '../base_health_entry.dart';
-import '../enums/data_source.dart';
+import 'package:lifetrack/data/models/base_health_entry.dart';
+import 'package:lifetrack/data/models/enums/data_source.dart';
 
 enum DoseStatus { taken, skipped, missed }
 
@@ -10,18 +10,13 @@ class DoseLog extends BaseHealthEntry {
     required this.scheduledTime,
     this.takenTime,
     required this.status,
-    DataSource source = DataSource.manual,
-    DateTime? createdAt,
-    DateTime? editedAt,
-    DateTime? deletedAt,
-    int entityVersion = 1,
+    super.source,
+    super.createdAt,
+    super.editedAt,
+    super.deletedAt,
+    super.entityVersion,
   }) : super(
           date: scheduledTime,
-          source: source,
-          createdAt: createdAt,
-          editedAt: editedAt,
-          deletedAt: deletedAt,
-          entityVersion: entityVersion,
         );
 
   final String id;

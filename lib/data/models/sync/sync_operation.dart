@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../enums/sync_operation_type.dart';
+import 'package:lifetrack/data/models/enums/sync_operation_type.dart';
 
 class SyncOperation {
   final String id;

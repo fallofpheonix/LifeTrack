@@ -1,5 +1,6 @@
 /// Prototype for Phase 10: System Hardening & Observability
 /// Monitors data integrity and application health.
+library;
 
 class HealthMonitorService {
   /// Scans the local database for logical inconsistencies.
