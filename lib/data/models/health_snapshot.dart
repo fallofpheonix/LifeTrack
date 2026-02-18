@@ -40,4 +40,16 @@ class HealthSnapshot {
       caloriesGoal: json['caloriesGoal'] as int? ?? 2000,
     );
   }
+
+  factory HealthSnapshot.empty() {
+    return HealthSnapshot(
+      steps: 0,
+      stepsGoal: 10000,
+      waterGlasses: 0,
+      waterGoal: 8,
+      sleepHours: 0,
+      calories: 0,
+      caloriesGoal: 2000,
+    );
+  }
 }

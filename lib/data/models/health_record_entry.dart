@@ -1,17 +1,35 @@
-class HealthRecordEntry {
+import 'base_health_entry.dart';
+import 'enums/data_source.dart';
+
+class HealthRecordEntry extends BaseHealthEntry {
   HealthRecordEntry({
     required this.id,
     required this.dateLabel,
     required this.condition,
     required this.vitals,
     required this.note,
-  });
+    this.attachmentPath,
+    DateTime? date, // Derived from dateLabel usually, but precise date needed for sorting
+    DataSource source = DataSource.manual,
+    DateTime? createdAt,
+    DateTime? editedAt,
+    DateTime? deletedAt,
+    int entityVersion = 1,
+  }) : super(
+          date: date ?? DateTime.tryParse(dateLabel) ?? DateTime.now(),
+          source: source,
+          createdAt: createdAt,
+          editedAt: editedAt,
+          deletedAt: deletedAt,
+          entityVersion: entityVersion,
+        );
 
   final String id;
   final String dateLabel;
   final String condition;
   final String vitals;
   final String note;
+  final String? attachmentPath;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -20,6 +38,8 @@ class HealthRecordEntry {
       'condition': condition,
       'vitals': vitals,
       'note': note,
+      'attachmentPath': attachmentPath,
+      ...toBaseJson(),
     };
   }
 
@@ -30,6 +50,13 @@ class HealthRecordEntry {
       condition: json['condition'] as String? ?? '',
       vitals: json['vitals'] as String? ?? '',
       note: json['note'] as String? ?? '',
+      attachmentPath: json['attachmentPath'] as String?,
+      date: json['date'] != null ? DateTime.parse(json['date'] as String) : null,
+      source: DataSource.values.asNameMap()[json['source']] ?? DataSource.manual,
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+      editedAt: json['editedAt'] != null ? DateTime.parse(json['editedAt'] as String) : null,
+      deletedAt: json['deletedAt'] != null ? DateTime.parse(json['deletedAt'] as String) : null,
+      entityVersion: json['entityVersion'] as int? ?? 1,
     );
   }
 }

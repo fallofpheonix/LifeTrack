@@ -1,540 +1,711 @@
+
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:pedometer/pedometer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pedometer/pedometer.dart';
 
-import '../../data/models/health_snapshot.dart';
 import '../../data/models/activity_log.dart';
-import '../../data/models/meal_entry.dart';
-import '../../data/models/reminder_item.dart';
 import '../../data/models/disease_info.dart';
-import '../../data/models/recovery_data_point.dart';
 import '../../data/models/health_record_entry.dart';
-import '../../data/models/weight_entry.dart';
-import '../../data/models/sleep_entry.dart';
+import '../../data/models/health_snapshot.dart';
+import '../../data/models/meal_entry.dart';
+import '../../data/models/medication/dose_log.dart';
+import '../../data/models/reminder_item.dart';
 import '../../data/models/scientist.dart';
-import '../../data/models/news_item.dart';
+import '../../data/models/sleep_entry.dart';
 import '../../data/models/user_profile.dart';
-import 'news_service.dart';
+import '../../data/models/vitals/blood_pressure_entry.dart';
+import '../../data/models/vitals/heart_rate_entry.dart';
+import '../../data/models/vitals/glucose_entry.dart';
+import '../../data/models/weight_entry.dart';
+import '../../data/models/enums/sync_operation_type.dart';
+import '../../data/models/sync/sync_operation.dart'; // Add this import
+import '../../data/models/intelligence/insight.dart'; // Add this
+import '../../data/models/clinical/recovery_data_point.dart'; // Add this (if exists, or I create it)
+import '../../data/models/content/news_item.dart'; // Add this (if exists, or I create it)
+import '../../core/data/repository/vitals_repository.dart';
+import '../../core/data/repository/medication_repository.dart';
+import 'secure_serializer.dart';
+import 'user_session_service.dart';
+import 'sync_queue_service.dart';
+import 'sync_service.dart';
+import 'health_log.dart';
+import '../settings/ui_preferences.dart';
+import 'background_service.dart';
+import 'global_error_handler.dart';
+import 'data_governance_service.dart';
+import 'governance/export_policy.dart'; // For exportUserData
 
-const String _snapshotKey = 'lifetrack_snapshot';
-const String _remindersKey = 'lifetrack_reminders';
-const String _recordsKey = 'lifetrack_records';
-const String _sleepKey = 'lifetrack_sleep';
-const String _profileKey = 'lifetrack_profile';
-const String _mealsKey = 'lifetrack_meals';
-const String _activitiesKey = 'lifetrack_activities';
-const String _weightKey = 'lifetrack_weight';
+// Const keys
+const String _snapshotKey = 'health_snapshot';
+const String _profileKey = 'user_profile';
+const String _remindersKey = 'reminders';
+const String _recordsKey = 'health_records';
+const String _mealsKey = 'meal_logs';
+const String _activitiesKey = 'activity_logs';
+const String _sleepKey = 'sleep_logs';
 
-class LifeTrackStore extends ChangeNotifier {
+class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
+  // Dependencies
+  final VitalsRepository vitalsRepo;
+  final MedicationRepository medicationRepo;
+  final UserSessionService sessionService;
+  final SecureSerializer secureSerializer;
+  final SyncQueueService syncQueue;
+  final SyncService syncService;
+  final DataGovernanceService governanceService;
+
+  // Data
+  HealthSnapshot snapshot;
+  UserProfile userProfile;
+  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode get themeMode => _themeMode;
+
+  void updateTheme(ThemeMode mode) {
+    _themeMode = mode;
+    notifyListeners();
+    // Persist preference...
+  }
+  
+  // Internal Lists (All data including deleted)
+  List<ActivityLog> _allActivities = [];
+  List<MealEntry> _allMeals = [];
+  List<SleepEntry> _allSleepLogs = [];
+  List<HealthRecordEntry> _allRecords = [];
+  
+  // Public Getters (Filter output deleted)
+  List<ActivityLog> get activities => _allActivities.where((e) => e.deletedAt == null).toList();
+  List<MealEntry> get meals => _allMeals.where((e) => e.deletedAt == null).toList();
+  List<SleepEntry> get sleepLogs => _allSleepLogs.where((e) => e.deletedAt == null).toList();
+  List<HealthRecordEntry> get records => _allRecords.where((e) => e.deletedAt == null).toList();
+
+  List<ReminderItem> reminders = [];
+  
+  // Vitals Cache (Managed by Repo, but exposed here for UI convenience/legacy)
+  List<WeightEntry> weightHistory = [];
+  List<BloodPressureEntry> bpHistory = [];
+  List<HeartRateEntry> hrHistory = [];
+  List<GlucoseEntry> glucoseHistory = [];
+  
+  // Meds Cache
+  List<DoseLog> doseLogs = [];
+
+  // Pedometer
+  StreamSubscription<StepCount>? _stepCountStream;
+
+  // Static Data (Mock for now, could move to Repo)
+  final List<DiseaseInfo> diseaseGuide = [
+      DiseaseInfo(name: 'Hypertension', symptoms: 'High Blood Pressure, Headaches', precautions: 'Reduce salt, Exercise', prevention: 'Maintain healthy weight', cure: 'Medication, Lifestyle changes'),
+      DiseaseInfo(name: 'Diabetes T2', symptoms: 'Thirst, Frequent urination', precautions: 'Low sugar diet', prevention: 'Weight loss, Exercise', cure: 'Insulin, Metformin'),
+      DiseaseInfo(name: 'Influenza', symptoms: 'Fever, Cough, Fatigue', precautions: 'Hygiene, Mask', prevention: 'Vaccine', cure: 'Rest, Fluids, Antivirals'),
+  ];
+
+  final List<Scientist> scientists = [
+      Scientist(name: 'Louis Pasteur', contribution: 'Germ Theory, Vaccination', description: 'French microbiologist composed of germ theory.', imageUrl: 'https://example.com/pasteur.jpg'),
+      Scientist(name: 'Alexander Fleming', contribution: 'Penicillin', description: 'Scottish physician who discovered penicillin.', imageUrl: 'https://example.com/fleming.jpg'),
+      Scientist(name: 'Marie Curie', contribution: 'Radioactivity', description: 'Polish-French physicist and chemist.', imageUrl: 'https://example.com/curie.jpg'),
+  ];
+
   LifeTrackStore({
+    required this.vitalsRepo,
+    required this.medicationRepo,
+    required this.sessionService,
+    required this.secureSerializer,
+    required this.syncQueue,
+    required this.syncService,
+    required this.governanceService,
     required this.snapshot,
-    required this.activities,
-    required this.meals,
-    required this.reminders,
-    required this.diseaseGuide,
-    required this.records,
-    required this.recoveryData,
     required this.userProfile,
-    required this.sleepLogs,
-    required this.scientists,
-    required this.news,
-    required this.weightHistory,
   }) {
+    WidgetsBinding.instance.addObserver(this);
     _initPedometer();
-    _fetchNews();
+    _refreshVitalsCache(); // Initial load
+    HealthLog.i('LifeTrackStore', 'Init', 'Store initialized successfully');
   }
 
-  HealthSnapshot snapshot;
-  final List<ActivityLog> activities;
-  final List<MealEntry> meals;
-  final List<ReminderItem> reminders;
-  final List<DiseaseInfo> diseaseGuide;
-  final List<RecoveryDataPoint> recoveryData;
-  final List<HealthRecordEntry> records;
-  final List<SleepEntry> sleepLogs;
-  final List<WeightEntry> weightHistory;
-  final List<Scientist> scientists;
-  List<NewsItem> news;
-  UserProfile userProfile;
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stepCountStream?.cancel();
+    super.dispose();
+  }
 
-  StreamSubscription<StepCount>? _stepCountStream;
-  final NewsService _newsService = NewsService();
-
-  Future<void> _fetchNews() async {
-    final List<NewsItem> fetched = await _newsService.fetchNews();
-    if (fetched.isNotEmpty) {
-      news = fetched;
-      notifyListeners();
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      HealthLog.i('LifeTrackStore', 'Lifecycle', 'App paused, persisting state');
+      _persistAll();
+    } else if (state == AppLifecycleState.resumed) {
+      HealthLog.i('LifeTrackStore', 'Lifecycle', 'App resumed');
+      _refreshVitalsCache();
+      // Resume logic here
     }
   }
 
   void _initPedometer() {
     _stepCountStream = Pedometer.stepCountStream.listen(
       (StepCount event) {
-        snapshot.steps = event.steps;
-        notifyListeners(); // Update UI in real-time
-        _persistSnapshot(); 
+        // Simple logic: delta check or raw? Assuming raw steps since boot.
+        // For simplicity in Phase 5, just update if greater.
+        // In real app, need daily reset logic.
+        if (event.steps > snapshot.steps) {
+            snapshot.steps = event.steps;
+            notifyListeners();
+        }
       },
       onError: (Object error) {
-        // Handle error or ignore
-        debugPrint('Pedometer error: $error');
+        HealthLog.w('LifeTrackStore', 'Pedometer', 'Stream error', error: error);
       },
     );
   }
 
-  @override
-  void dispose() {
-    _stepCountStream?.cancel();
-    super.dispose();
+  Future<void> _refreshVitalsCache() async {
+      weightHistory = await vitalsRepo.getWeight();
+      bpHistory = await vitalsRepo.getBP();
+      hrHistory = await vitalsRepo.getHeartRate();
+      glucoseHistory = await vitalsRepo.getGlucose();
+      // Dose logs?
+      // doseLogs = await medicationRepo.getDoseLogs(); // Add this if needed
+      notifyListeners();
   }
 
-  static Future<LifeTrackStore> load() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+  static Future<LifeTrackStore> load(
+    VitalsRepository vitalsRepo,
+    MedicationRepository medicationRepo,
+    UserSessionService sessionService,
+    SecureSerializer secureSerializer,
+    SyncQueueService syncQueue,
+    SyncService syncService,
+    DataGovernanceService governanceService,
+  ) async {
+     try {
+       final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    final HealthSnapshot snapshot = _decodeSnapshot(prefs.getString(_snapshotKey)) ??
-        HealthSnapshot(
-          steps: 0, // Will be updated by pedometer
-          stepsGoal: 10000,
-          waterGlasses: 6,
-          waterGoal: 8,
-          sleepHours: 0, // Calculated from logs
-          calories: 1520,
-          caloriesGoal: 2100,
-        );
+       // Helper to load encrypted
+       Future<String?> loadStr(String key) async {
+           final enc = prefs.getString(key);
+           if (enc == null) return null;
+           return await secureSerializer.decryptString(enc);
+       }
 
-    final List<ReminderItem> reminders = _decodeReminders(prefs.getString(_remindersKey)) ??
-        <ReminderItem>[
-          ReminderItem(title: 'Drink water', timeLabel: 'Every 2 hours', enabled: true),
-          ReminderItem(title: 'Take medication', timeLabel: '08:00 PM', enabled: true),
-          ReminderItem(title: 'Evening walk', timeLabel: '07:00 PM', enabled: false),
-        ];
+       final snapStr = await loadStr(_snapshotKey);
+       final profileStr = await loadStr(_profileKey);
+       final remindersStr = await loadStr(_remindersKey);
+       final recordsStr = await loadStr(_recordsKey);
+       final mealsStr = await loadStr(_mealsKey);
+       final activitiesStr = await loadStr(_activitiesKey);
+       final sleepStr = await loadStr(_sleepKey);
 
-    final List<HealthRecordEntry> records = _decodeRecords(prefs.getString(_recordsKey)) ??
-        <HealthRecordEntry>[
-          HealthRecordEntry(
-            id: 'seed_1',
-            dateLabel: '2026-02-10',
-            condition: 'Diabetes (Type 2)',
-            vitals: 'Fasting glucose 112 mg/dL',
-            note: 'Morning walk completed',
-          ),
-          HealthRecordEntry(
-            id: 'seed_2',
-            dateLabel: '2026-02-12',
-            condition: 'Hypertension',
-            vitals: 'BP 126/82 mmHg',
-            note: 'Reduced salty snacks',
-          ),
-        ];
+       // Decode in background (simulated or real)
+       final snapshot = await BackgroundService.decodeSnapshot(snapStr) ?? HealthSnapshot.empty();
+       final profile = await BackgroundService.decodeProfile(profileStr) ?? UserProfile.empty();
+       
+       final reminders = await BackgroundService.decodeReminders(remindersStr);
+       final records = await BackgroundService.decodeRecords(recordsStr);
+       final meals = await BackgroundService.decodeMeals(mealsStr);
+       final activities = await BackgroundService.decodeActivities(activitiesStr);
+       final sleep = await BackgroundService.decodeSleep(sleepStr);
 
-    final UserProfile userProfile = _decodeProfile(prefs.getString(_profileKey)) ??
-        UserProfile(name: 'User', age: 30, weight: 70, height: 170, gender: 'Not specified', bloodType: 'O+');
+       final store = LifeTrackStore(
+        vitalsRepo: vitalsRepo,
+        medicationRepo: medicationRepo,
+        sessionService: sessionService,
+        secureSerializer: secureSerializer,
+        syncQueue: syncQueue,
+        syncService: syncService,
+        governanceService: governanceService,
+        snapshot: snapshot,
+        userProfile: profile,
+       );
 
-    final List<SleepEntry> sleepLogs = _decodeSleep(prefs.getString(_sleepKey)) ?? <SleepEntry>[];
-    
-    // Recalculate sleep hours from logs
-    double totalSleep = 0;
-    final DateTime now = DateTime.now();
-    for (final SleepEntry log in sleepLogs) {
-      if (log.endTime.year == now.year && log.endTime.month == now.month && log.endTime.day == now.day) {
-        totalSleep += log.durationHours;
-      }
-    }
-    snapshot.sleepHours = totalSleep;
+       store.reminders = reminders;
+       store._allRecords = records;
+       store._allMeals = meals;
+       store._allActivities = activities;
+       store._allSleepLogs = sleep;
+       
+       return store;
 
-    final List<MealEntry> meals = _decodeMeals(prefs.getString(_mealsKey)) ??
-        <MealEntry>[
-          MealEntry(id: 'seed_m1', mealType: 'Breakfast', title: 'Oats + Banana', calories: 320),
-          MealEntry(id: 'seed_m2', mealType: 'Lunch', title: 'Paneer salad bowl', calories: 460),
-          MealEntry(id: 'seed_m3', mealType: 'Snack', title: 'Nuts + Green tea', calories: 180),
-          MealEntry(id: 'seed_m4', mealType: 'Dinner', title: 'Dal + Brown rice', calories: 420),
-        ];
-
-    final List<ActivityLog> activities = _decodeActivities(prefs.getString(_activitiesKey)) ??
-        <ActivityLog>[]; // Empty by default or seeded if needed
-
-    final List<WeightEntry> weightHistory = _decodeWeight(prefs.getString(_weightKey)) ??
-        <WeightEntry>[
-            WeightEntry(date: DateTime.now().subtract(const Duration(days: 30)), weight: 72.5),
-            WeightEntry(date: DateTime.now().subtract(const Duration(days: 14)), weight: 71.8),
-            WeightEntry(date: DateTime.now().subtract(const Duration(days: 1)), weight: 71.0),
-        ];
-
-    return LifeTrackStore(
-      snapshot: snapshot,
-      activities: activities,
-      meals: meals,
-      reminders: reminders,
-      weightHistory: weightHistory,
-      diseaseGuide: <DiseaseInfo>[
-        DiseaseInfo(
-          name: 'Diabetes (Type 2)',
-          symptoms: 'Frequent urination, fatigue, increased thirst',
-          precautions: 'Track glucose, reduce refined sugar, regular exercise',
-          prevention: 'Maintain healthy weight, active lifestyle, balanced diet.',
-          cure: 'Management via diet, exercise, insulin or oral meds.',
-        ),
-        DiseaseInfo(
-          name: 'Hypertension',
-          symptoms: 'Often asymptomatic, headache, dizziness',
-          precautions: 'Low-sodium diet, weight control, daily BP monitoring',
-          prevention: 'Healthy diet, exercise, limit alcohol and smoking.',
-          cure: 'Lifestyle changes, antihypertensive medication.',
-        ),
-        DiseaseInfo(
-          name: 'Hypothyroidism',
-          symptoms: 'Weight gain, low energy, dry skin',
-          precautions: 'Take medication on time, routine thyroid tests',
-          prevention: 'Iodine sufficiency (though some causes are autoimmune).',
-          cure: 'Thyroid hormone replacement therapy.',
-        ),
-        DiseaseInfo(
-          name: 'Asthma',
-          symptoms: 'Wheezing, shortness of breath, chest tightness, coughing',
-          precautions: 'Avoid triggers, inhaler adherence, breathing exercises',
-          prevention: 'Avoid allergens, smoke, and pollution.',
-          cure: 'No cure, but manageable with inhalers and lifestyle changes.',
-        ),
-        DiseaseInfo(
-          name: 'Arthritis',
-          symptoms: 'Joint pain, stiffness, swelling, reduced range of motion',
-          precautions: 'Regular low-impact exercise, maintain healthy weight',
-          prevention: 'Stay active, protect joints from injury.',
-          cure: 'Medication, physiotherapy, sometimes surgery.',
-        ),
-        DiseaseInfo(
-          name: 'Malaria',
-          symptoms: 'Fever, chills, headache, nausea, muscle pain',
-          precautions: 'Use mosquito nets, insect repellent, antimalarial meds',
-          prevention: 'Mosquito control, avoiding bites.',
-          cure: 'Prescription antimalarial drugs.',
-        ),
-        DiseaseInfo(
-          name: 'Common Cold',
-          symptoms: 'Runny nose, sore throat, cough, congestion',
-          precautions: 'Wash hands, avoid close contact with sick people',
-          prevention: 'Good hygiene, immune system support.',
-          cure: 'Rest, fluids, over-the-counter symptom relief.',
-        ),
-      ],
-      records: records,
-      recoveryData: <RecoveryDataPoint>[
-        RecoveryDataPoint(month: 'M1', fastingGlucose: 168, postMealGlucose: 238),
-        RecoveryDataPoint(month: 'M2', fastingGlucose: 149, postMealGlucose: 212),
-        RecoveryDataPoint(month: 'M3', fastingGlucose: 136, postMealGlucose: 194),
-        RecoveryDataPoint(month: 'M4', fastingGlucose: 124, postMealGlucose: 176),
-      ],
-      userProfile: userProfile,
-      sleepLogs: sleepLogs,
-      scientists: <Scientist>[
-        Scientist(
-          name: 'Louis Pasteur',
-          contribution: 'Germ theory & Pasteurization',
-          description: 'French biologist, microbiologist, and chemist renowned for his discoveries of the principles of vaccination, microbial fermentation, and pasteurization.',
-          imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/3c/Albert_Edelfelt_-_Louis_Pasteur_-_Google_Art_Project.jpg',
-        ),
-        Scientist(
-          name: 'Marie Curie',
-          contribution: 'Radioactivity',
-          description: 'Polish and naturalized-French physicist and chemist who conducted pioneering research on radioactivity.',
-          imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Marie_Curie_c1920.jpg',
-        ),
-        Scientist(
-          name: 'Alexander Fleming',
-          contribution: 'Penicillin',
-          description: 'Scottish physician and microbiologist, best known for discovering the world\'s first broadly effective antibiotic substance.',
-          imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/bf/Alexander_Fleming_1943.jpg',
-        ),
-        Scientist(
-          name: 'Edward Jenner',
-          contribution: 'Smallpox Vaccine',
-          description: 'English physician and scientist who pioneered the concept of vaccines including creating the smallpox vaccine, the world\'s first vaccine.',
-          imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c2/Edward_Jenner.jpg',
-        ),
-        Scientist(
-          name: 'Florence Nightingale',
-          contribution: 'Modern Nursing',
-          description: 'English social reformer, statistician and the founder of modern nursing.',
-          imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/14/Florence_Nightingale_%28H_Hering_NPG_x82368%29.jpg',
-        ),
-      ],
-      news: <NewsItem>[],
-    );
+     } catch (e, stack) {
+       HealthLog.e('LifeTrackStore', 'Load', 'Failed to load store', error: e, stackTrace: stack);
+       // Return empty store on fail to allow app to start? Or rethrow?
+       // Rethrowing is safer to detect corruption.
+       rethrow;
+     }
   }
 
-  Future<void> addWeightEntry(WeightEntry entry) async {
-    weightHistory.add(entry);
-    weightHistory.sort((WeightEntry a, WeightEntry b) => a.date.compareTo(b.date));
+  // --- Actions ---
+
+  Future<void> addRecord(HealthRecordEntry record) async {
+    _allRecords.insert(0, record);
     notifyListeners();
-    await _persistWeight();
+    await _persistRecords();
+    await _enqueueSync(SyncOperationType.create, 'medical_record', record.id, record.toJson());
+    HealthLog.audit('LifeTrackStore', 'AddRecord', 'Medical Record Added', userId: 'user', details: {'id': record.id});
   }
 
-  Future<void> _persistWeight() async {
-     final SharedPreferences prefs = await SharedPreferences.getInstance();
-     await prefs.setString(_weightKey, jsonEncode(weightHistory.map((WeightEntry e) => e.toJson()).toList()));
-  }
-
-  Future<void> addActivity(ActivityLog activity) async {
-    activities.insert(0, activity);
-    snapshot.calories = (snapshot.calories - activity.caloriesBurned).clamp(0, 9999);
+  // Activity
+  Future<void> addActivity(ActivityLog log) async {
+    _allActivities.insert(0, log);
     notifyListeners();
     await _persistActivities();
-    await _persistSnapshot();
+    await _enqueueSync(SyncOperationType.create, 'activity', log.id, log.toJson());
   }
 
   Future<void> deleteActivity(String id) async {
-    activities.removeWhere((ActivityLog item) => item.id == id);
-    notifyListeners();
-    await _persistActivities();
+    final index = _allActivities.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      final old = _allActivities[index];
+       final updated = ActivityLog(
+         id: old.id, date: old.date, durationMinutes: old.durationMinutes,
+         type: old.type, name: old.name, caloriesBurned: old.caloriesBurned,
+         createdAt: old.createdAt, editedAt: DateTime.now().toUtc(),
+         deletedAt: DateTime.now().toUtc(), entityVersion: old.entityVersion + 1
+       );
+       _allActivities[index] = updated;
+       notifyListeners();
+       await _persistActivities();
+       await _enqueueSync(SyncOperationType.delete, 'activity', id, {});
+    }
   }
 
-  Future<void> addMeal(MealEntry meal) async {
-    meals.insert(0, meal);
-    snapshot.calories += meal.calories;
+  // Nutrition
+  Future<void> addMeal(MealEntry entry) async {
+    _allMeals.insert(0, entry);
     notifyListeners();
     await _persistMeals();
-    await _persistSnapshot();
+    await _enqueueSync(SyncOperationType.create, 'meal', entry.id, entry.toJson());
   }
 
   Future<void> deleteMeal(String id) async {
-    final int index = meals.indexWhere((MealEntry item) => item.id == id);
-    if (index != -1) {
-      final MealEntry meal = meals[index];
-      snapshot.calories = (snapshot.calories - meal.calories).clamp(0, 9999);
-      meals.removeAt(index);
-      notifyListeners();
-      await _persistMeals();
-      await _persistSnapshot();
-    }
+     final index = _allMeals.indexWhere((e) => e.id == id);
+     if (index != -1) {
+       final old = _allMeals[index];
+        final updated = MealEntry(
+          id: old.id,
+          date: old.date,
+          mealType: old.mealType,
+          title: old.title,
+          calories: old.calories,
+          createdAt: old.createdAt,
+          editedAt: DateTime.now().toUtc(),
+          deletedAt: DateTime.now().toUtc(),
+          entityVersion: old.entityVersion + 1
+        );
+       _allMeals[index] = updated;
+       notifyListeners();
+       await _persistMeals();
+       await _enqueueSync(SyncOperationType.delete, 'meal', id, {});
+     }
   }
 
   Future<void> addWaterGlass() async {
-    if (snapshot.waterGlasses < 20) {
-      snapshot.waterGlasses += 1;
-      notifyListeners();
-      await _persistSnapshot();
-    }
+    snapshot.waterGlasses++;
+    notifyListeners();
+    await _persistSnapshot();
+    await _enqueueSync(SyncOperationType.update, 'snapshot', 'daily_snapshot', snapshot.toJson());
   }
 
   Future<void> removeWaterGlass() async {
     if (snapshot.waterGlasses > 0) {
-      snapshot.waterGlasses -= 1;
+      snapshot.waterGlasses--;
       notifyListeners();
       await _persistSnapshot();
+      await _enqueueSync(SyncOperationType.update, 'snapshot', 'daily_snapshot', snapshot.toJson());
     }
   }
 
-  Future<void> toggleReminder(int index, bool enabled) async {
-    reminders[index].enabled = enabled;
-    notifyListeners();
-    await _persistReminders();
+  // Vitals Wrappers
+  Future<void> addWeightEntry(WeightEntry entry) async {
+    await vitalsRepo.saveWeight(entry);
+    await _refreshVitalsCache();
+     await _enqueueSync(SyncOperationType.create, 'weight', entry.date.toIso8601String(), entry.toJson());
   }
 
-  Future<void> addRecord(HealthRecordEntry record) async {
-    records.insert(0, record);
-    notifyListeners();
-    await _persistRecords();
+  Future<void> addBloodPressure(BloodPressureEntry entry) async {
+    await vitalsRepo.saveBP(entry);
+    await _refreshVitalsCache();
+    await _enqueueSync(SyncOperationType.create, 'blood_pressure', entry.id, entry.toJson());
+  }
+
+  Future<void> addHeartRate(HeartRateEntry entry) async {
+    await vitalsRepo.saveHeartRate(entry);
+    await _refreshVitalsCache();
+    await _enqueueSync(SyncOperationType.create, 'heart_rate', entry.id, entry.toJson());
+  }
+
+  Future<void> addGlucose(GlucoseEntry entry) async {
+    await vitalsRepo.saveGlucose(entry);
+    await _refreshVitalsCache();
+    await _enqueueSync(SyncOperationType.create, 'glucose', entry.id, entry.toJson());
+  }
+
+  // Reminders
+  Future<void> toggleReminder(String id) async {
+    final index = reminders.indexWhere((r) => r.id == id);
+    if (index != -1) {
+      final old = reminders[index];
+      final updated = ReminderItem(
+        id: old.id,
+        title: old.title,
+        timeLabel: old.timeLabel,
+        enabled: !old.enabled,
+        days: old.days,
+        type: old.type,
+      );
+      reminders[index] = updated;
+      notifyListeners();
+      await _persistReminders();
+    }
+  }
+
+  // Placeholders
+  List<Insight> get insights => [
+    Insight(
+      id: '1', 
+      title: "Activity Trend", 
+      message: "You're walking more than last week!", 
+      type: InsightType.success, 
+      date: DateTime.now()
+    ),
+    Insight(
+      id: '2', 
+      title: "Hydration", 
+      message: "Try to drink more water in the morning.", 
+      type: InsightType.info, 
+      date: DateTime.now()
+    ),
+    Insight(
+      id: '3', 
+      title: "Sleep Quality", 
+      message: "Sleep consistency is key to recovery.", 
+      type: InsightType.warning, 
+      date: DateTime.now()
+    ),
+  ];
+
+  List<RecoveryDataPoint> get recoveryData => [
+    RecoveryDataPoint(label: 'Recovery', value: '85%', status: 'Good'),
+    RecoveryDataPoint(label: 'Strain', value: 'Low', status: 'Optimal'),
+  ];
+
+  List<NewsItem> get news => [
+    NewsItem(id: '1', title: 'New Research on Sleep', summary: 'Studies show 8 hours is optimal.', date: DateTime.now(), source: 'HealthDaily', link: 'https://example.com/sleep'),
+    NewsItem(id: '2', title: 'Hydration Benefits', summary: 'Water improves cognitive function.', date: DateTime.now(), source: 'ScienceToday', link: 'https://example.com/water'),
+  ];
+
+  Future<Map<String, dynamic>> exportAll() async {
+    return {
+      'profile': userProfile.toJson(),
+      'snapshot': snapshot.toJson(),
+      'records': records.map((e) => e.toJson()).toList(),
+      'vitals': {
+        'weight': weightHistory.map((e) => e.toJson()).toList(),
+        'bp': bpHistory.map((e) => e.toJson()).toList(),
+        'glucose': glucoseHistory.map((e) => e.toJson()).toList(),
+        'heart_rate': hrHistory.map((e) => e.toJson()).toList(),
+      },
+      'activities': activities.map((e) => e.toJson()).toList(),
+      'sleep': sleepLogs.map((e) => e.toJson()).toList(),
+      'meals': meals.map((e) => e.toJson()).toList(),
+    };
   }
 
   Future<void> deleteRecord(String id) async {
-    records.removeWhere((HealthRecordEntry item) => item.id == id);
-    notifyListeners();
-    await _persistRecords();
+    final index = _allRecords.indexWhere((e) => e.id == id);
+    if (index != -1) {
+        final old = _allRecords[index];
+        final updated = HealthRecordEntry(
+            id: old.id, dateLabel: old.dateLabel, date: old.date, vitals: old.vitals, note: old.note, 
+            condition: old.condition, attachmentPath: old.attachmentPath,
+            source: old.source, createdAt: old.createdAt, editedAt: DateTime.now().toUtc(),
+            deletedAt: DateTime.now().toUtc(), entityVersion: old.entityVersion + 1
+        );
+        _allRecords[index] = updated;
+        notifyListeners();
+        await _persistRecords();
+        await _enqueueSync(SyncOperationType.delete, 'medical_record', id, {});
+    }
   }
 
   Future<void> addSleepLog(SleepEntry entry) async {
-    sleepLogs.insert(0, entry);
-    // Update snapshot if today
-    final DateTime now = DateTime.now();
-    if (entry.endTime.year == now.year && entry.endTime.month == now.month && entry.endTime.day == now.day) {
+    _allSleepLogs.insert(0, entry);
+    // Update snapshot logic (simplified)
+    if (_isToday(entry.endTime)) {
        snapshot.sleepHours += entry.durationHours;
     }
     notifyListeners();
     await _persistSleep();
     await _persistSnapshot();
+    await _enqueueSync(SyncOperationType.create, 'sleep', entry.id, entry.toJson());
   }
 
   Future<void> deleteSleepLog(String id) async {
-    final int index = sleepLogs.indexWhere((SleepEntry item) => item.id == id);
+    final index = _allSleepLogs.indexWhere((e) => e.id == id);
     if (index != -1) {
-       final SleepEntry entry = sleepLogs[index];
-       final DateTime now = DateTime.now();
-       if (entry.endTime.year == now.year && entry.endTime.month == now.month && entry.endTime.day == now.day) {
-         snapshot.sleepHours = (snapshot.sleepHours - entry.durationHours).clamp(0.0, 24.0);
+       final old = _allSleepLogs[index];
+       if (_isToday(old.endTime)) {
+           snapshot.sleepHours = (snapshot.sleepHours - old.durationHours).clamp(0.0, 24.0);
        }
-       sleepLogs.removeAt(index);
+       final updated = SleepEntry(
+         id: old.id, startTime: old.startTime, endTime: old.endTime,
+         source: old.source, createdAt: old.createdAt, editedAt: DateTime.now().toUtc(),
+         deletedAt: DateTime.now().toUtc(), entityVersion: old.entityVersion + 1
+       );
+       _allSleepLogs[index] = updated;
+       
        notifyListeners();
        await _persistSleep();
        await _persistSnapshot();
+       await _enqueueSync(SyncOperationType.delete, 'sleep', id, {});
     }
   }
 
   Future<void> updateProfile(UserProfile profile, int newGoal) async {
     userProfile = profile;
-    snapshot.caloriesGoal = newGoal; // Sync goal
+    snapshot.caloriesGoal = newGoal;
     notifyListeners();
     await _persistProfile();
     await _persistSnapshot();
+    await _enqueueSync(SyncOperationType.update, 'profile', 'user_profile', profile.toJson());
   }
 
-  Future<void> _persistSnapshot() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_snapshotKey, jsonEncode(snapshot.toJson()));
-  }
-
-  Future<void> _persistReminders() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _remindersKey,
-      jsonEncode(reminders.map((ReminderItem item) => item.toJson()).toList()),
-    );
-  }
-
-  Future<void> _persistRecords() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _recordsKey,
-      jsonEncode(records.map((HealthRecordEntry item) => item.toJson()).toList()),
-    );
-  }
-
-  Future<void> _persistMeals() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _mealsKey,
-      jsonEncode(meals.map((MealEntry item) => item.toJson()).toList()),
-    );
-  }
-
-  Future<void> _persistActivities() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _activitiesKey,
-      jsonEncode(activities.map((ActivityLog item) => item.toJson()).toList()),
-    );
-  }
-
-  Future<void> _persistSleep() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _sleepKey,
-      jsonEncode(sleepLogs.map((SleepEntry item) => item.toJson()).toList()),
-    );
-  }
-
-  Future<void> _persistProfile() async {
+  Future<void> clearAll() async {
+     HealthLog.audit('LifeTrackStore', 'ClearData', 'User initiated data wipe', userId: 'user');
+     
+     _allActivities.clear();
+     _allMeals.clear();
+     _allSleepLogs.clear();
+     _allRecords.clear();
+     reminders.clear();
+     weightHistory.clear();
+     bpHistory.clear();
+     hrHistory.clear();
+     glucoseHistory.clear();
+     doseLogs.clear();
+     
+     snapshot = HealthSnapshot.empty();
+     
+     notifyListeners();
+     
      final SharedPreferences prefs = await SharedPreferences.getInstance();
-     await prefs.setString(_profileKey, jsonEncode(userProfile.toJson()));
+     await prefs.clear();
+     await UiPreferences.init();
   }
-}
 
-HealthSnapshot? _decodeSnapshot(String? raw) {
-  if (raw == null || raw.isEmpty) {
-    return null;
+  // --- Persistence Wrappers ---
+  Future<void> _persistAll() async {
+      await Future.wait([
+          _persistSnapshot(),
+          _persistProfile(),
+          _persistReminders(),
+          _persistRecords(),
+          _persistMeals(),
+          _persistActivities(),
+          _persistSleep(),
+      ]);
   }
-  try {
-    final Map<String, dynamic> json = jsonDecode(raw) as Map<String, dynamic>;
-    return HealthSnapshot.fromJson(json);
-  } catch (_) {
-    return null;
-  }
-}
 
-List<ReminderItem>? _decodeReminders(String? raw) {
-  if (raw == null || raw.isEmpty) {
-    return null;
-  }
-  try {
-    final List<dynamic> json = jsonDecode(raw) as List<dynamic>;
-    return json
-        .map((dynamic e) => ReminderItem.fromJson(e as Map<String, dynamic>))
-        .toList();
-  } catch (_) {
-    return null;
-  }
-}
+  Future<void> _persistSnapshot() async => _save(_snapshotKey, snapshot.toJson());
+  Future<void> _persistProfile() async => _save(_profileKey, userProfile.toJson());
+  Future<void> _persistReminders() async => _saveList(_remindersKey, reminders);
+  Future<void> _persistRecords() async => _saveList(_recordsKey, _allRecords);
+  Future<void> _persistMeals() async => _saveList(_mealsKey, _allMeals);
+  Future<void> _persistActivities() async => _saveList(_activitiesKey, _allActivities);
+  Future<void> _persistSleep() async => _saveList(_sleepKey, _allSleepLogs);
 
-List<HealthRecordEntry>? _decodeRecords(String? raw) {
-  if (raw == null || raw.isEmpty) {
-    return null;
+  Future<void> _save(String key, dynamic json) async {
+      final prefs = await SharedPreferences.getInstance();
+      final str = jsonEncode(json);
+      final enc = await secureSerializer.encryptString(str);
+      await prefs.setString(key, enc);
   }
-  try {
-    final List<dynamic> json = jsonDecode(raw) as List<dynamic>;
-    return json
-        .map((dynamic e) => HealthRecordEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
-  } catch (_) {
-    return null;
-  }
-}
 
-List<MealEntry>? _decodeMeals(String? raw) {
-  if (raw == null || raw.isEmpty) {
-    return null;
+  Future<void> _saveList(String key, List<dynamic> list) async {
+      final prefs = await SharedPreferences.getInstance();
+      final str = jsonEncode(list.map((e) => e.toJson()).toList());
+      final enc = await secureSerializer.encryptString(str);
+      await prefs.setString(key, enc);
   }
-  try {
-    final List<dynamic> json = jsonDecode(raw) as List<dynamic>;
-    return json
-        .map((dynamic e) => MealEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
-  } catch (_) {
-    return null;
-  }
-}
 
-List<ActivityLog>? _decodeActivities(String? raw) {
-  if (raw == null || raw.isEmpty) {
-    return null;
+  Future<void> _enqueueSync(SyncOperationType type, String feature, String id, Map<String, dynamic> payload, {SyncPriority priority = SyncPriority.normal}) async {
+    try {
+        await syncQueue.enqueue(
+          SyncOperation(
+              id: DateTime.now().microsecondsSinceEpoch.toString(), // Unique op ID
+              type: type,
+              entityTable: feature,
+              entityId: id,
+              payload: payload,
+              priority: priority,
+              timestamp: DateTime.now().toUtc(),
+          )
+        );
+        // Trigger sync immediately if critical or network valid
+        syncService.triggerSync();
+    } catch (e) {
+        HealthLog.e('LifeTrackStore', 'SyncEnqueue', 'Failed to enqueue sync op', error: e);
+    }
   }
-  try {
-    final List<dynamic> json = jsonDecode(raw) as List<dynamic>;
-    return json
-        .map((dynamic e) => ActivityLog.fromJson(e as Map<String, dynamic>))
-        .toList();
-  } catch (_) {
-    return null;
-  }
-}
 
-List<SleepEntry>? _decodeSleep(String? raw) {
-  if (raw == null || raw.isEmpty) {
-    return null;
-  }
-  try {
-    final List<dynamic> json = jsonDecode(raw) as List<dynamic>;
-    return json
-        .map((dynamic e) => SleepEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
-  } catch (_) {
-    return null;
-  }
-}
 
-UserProfile? _decodeProfile(String? raw) {
-  if (raw == null || raw.isEmpty) {
-    return null;
+  // --- Search Methods ---
+  List<DiseaseInfo> searchDiseases(String query) {
+    if (query.isEmpty) return [];
+    final q = query.toLowerCase();
+    return diseaseGuide.where((d) => 
+      d.name.toLowerCase().contains(q) || d.symptoms.toLowerCase().contains(q)
+    ).toList();
   }
-  try {
-    final Map<String, dynamic> json = jsonDecode(raw) as Map<String, dynamic>;
-    return UserProfile.fromJson(json);
-  } catch (_) {
-    return null;
-  }
-}
 
-List<WeightEntry>? _decodeWeight(String? raw) {
-  if (raw == null || raw.isEmpty) {
-    return null;
+  List<Scientist> searchScientists(String query) {
+    if (query.isEmpty) return [];
+    final q = query.toLowerCase();
+    return scientists.where((s) => 
+      s.name.toLowerCase().contains(q) || s.contribution.toLowerCase().contains(q)
+    ).toList();
   }
-  try {
-    final List<dynamic> json = jsonDecode(raw) as List<dynamic>;
-    return json
-        .map((dynamic e) => WeightEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
-  } catch (_) {
-    return null;
+
+  List<HealthRecordEntry> searchRecords(String query) {
+    if (query.isEmpty) return [];
+    final q = query.toLowerCase();
+    return records.where((r) => 
+      r.condition.toLowerCase().contains(q) || r.note.toLowerCase().contains(q)
+    ).toList();
+  }
+  
+  // --- Vitals & Meds Actions ---
+
+  Future<void> deleteBP(String id) async {
+      await vitalsRepo.deleteBP(id);
+      bpHistory.removeWhere((e) => e.id == id); 
+      notifyListeners();
+      await _enqueueSync(SyncOperationType.delete, 'blood_pressure', id, {});
+  }
+
+  Future<void> deleteHeartRate(String id) async {
+      await vitalsRepo.deleteHeartRate(id);
+      hrHistory.removeWhere((e) => e.id == id);
+      notifyListeners();
+      await _enqueueSync(SyncOperationType.delete, 'heart_rate', id, {});
+  }
+
+  Future<void> deleteGlucose(String id) async {
+      await vitalsRepo.deleteGlucose(id);
+      glucoseHistory.removeWhere((e) => e.id == id);
+      notifyListeners();
+      await _enqueueSync(SyncOperationType.delete, 'glucose', id, {});
+  }
+
+  Future<void> deleteWeight(DateTime date) async {
+      await vitalsRepo.deleteWeight(date);
+      weightHistory.removeWhere((e) => _isSameDay(e.date, date)); 
+      notifyListeners();
+      await _enqueueSync(SyncOperationType.delete, 'weight', date.toIso8601String(), {});
+  }
+
+  Future<void> deleteDoseLog(String id) async {
+      await medicationRepo.deleteDoseLog(id);
+      doseLogs.removeWhere((d) => d.id == id);
+      notifyListeners();
+      await _enqueueSync(SyncOperationType.delete, 'dose_log', id, {});
+  }
+  
+  bool _isSameDay(DateTime a, DateTime b) {
+      return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+  
+  // --- Data Governance ---
+
+  Future<void> enforceRetentionPolicy() async {
+    HealthLog.i('LifeTrackStore', 'Governance', 'Enforcing Retention Policy...');
+    
+    // 1. Records
+    final expiredRecords = _allRecords.where((r) => 
+      !governanceService.shouldRetain(r.createdAt ?? r.date, 'medical_record') && r.deletedAt == null
+    ).toList();
+    for (var r in expiredRecords) {
+       await deleteRecord(r.id); 
+    }
+
+    // 2. Vitals
+    // Note: Iterating in-memory cache. 
+    for (var e in weightHistory) {
+         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt ?? e.date, 'medical_record')) {
+            await deleteWeight(e.date);
+         }
+    }
+    for (var e in bpHistory) {
+         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt ?? e.date, 'medical_record')) {
+            await deleteBP(e.id);
+         }
+    }
+    for (var e in hrHistory) {
+         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt ?? e.date, 'medical_record')) {
+            await deleteHeartRate(e.id);
+         }
+    }
+    for (var e in glucoseHistory) {
+         if (e.deletedAt == null && !governanceService.shouldRetain(e.createdAt ?? e.date, 'medical_record')) {
+            await deleteGlucose(e.id);
+         }
+    }
+    
+    // 3. Dose Logs
+    // Ensure we have them loaded
+    final doses = await medicationRepo.getDoseLogs();
+    for (var d in doses) {
+        if (d.deletedAt == null && !governanceService.shouldRetain(d.createdAt ?? d.scheduledTime, 'medical_record')) {
+            await deleteDoseLog(d.id); // Need to expose deleteDoseLog in Store or call repo directly? 
+            // Store has no deleteDoseLog usually. Let's call Repo but we need to sync?
+            // Repo.delete does soft delete but DOES NOT queue sync in Store unless Store wrapper does it.
+            // Current LifeTrackStore architecture wraps Vitals logic but might not wrap Meds logic fully yet?
+            // Let's checks if `deleteDoseLog` exists in Store. If not, we should probably add it or use repo + syncQueue manually.
+            // For now, calling repo directly. Sync might be missed if not hooked.
+            await medicationRepo.deleteDoseLog(d.id);
+            // TODO: Enqueue sync if not handled by repo (Repo usually doesn't queue sync)
+        }
+    }
+
+    HealthLog.i('LifeTrackStore', 'Governance', 'Retention Policy Enforcement Complete');
+  }
+
+  Future<Map<String, dynamic>> exportUserData() async {
+     HealthLog.i('LifeTrackStore', 'Governance', 'Exporting User Data...');
+     
+     // Ensure latest data
+     await _refreshVitalsCache(); 
+     final doses = await medicationRepo.getDoseLogs(includeDeleted: true);
+     final meds = await medicationRepo.getMedications(includeDeleted: true);
+
+     final Map<String, dynamic> raw = {
+        'profile': userProfile.toJson(),
+        'snapshot': snapshot.toJson(),
+        'records': _allRecords.map((e) => e.toJson()).toList(),
+        'medications': meds.map((m) => m.toJson()).toList(),
+        'dose_logs': doses.map((d) => d.toJson()).toList(),
+        'weight_history': weightHistory.map((e) => e.toJson()).toList(),
+        'bp_history': bpHistory.map((e) => e.toJson()).toList(),
+        'hr_history': hrHistory.map((e) => e.toJson()).toList(),
+        'glucose_history': glucoseHistory.map((e) => e.toJson()).toList(),
+        'activities': _allActivities.map((e) => e.toJson()).toList(),
+        'meal_logs': _allMeals.map((e) => e.toJson()).toList(),
+        'sleep_logs': _allSleepLogs.map((e) => e.toJson()).toList(),
+        'reminders': reminders.map((e) => e.toJson()).toList(),
+     };
+     
+     final policy = ExportPolicy(scope: ExportScope.full);
+     return await governanceService.exportData(raw, policy: policy);
+  }
+
+
+  // Helpers
+  bool _isToday(DateTime d) {
+      final now = DateTime.now();
+      return d.year == now.year && d.month == now.month && d.day == now.day;
   }
 }

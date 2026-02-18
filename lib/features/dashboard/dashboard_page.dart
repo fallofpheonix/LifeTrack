@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import '../../data/models/health_snapshot.dart';
 import '../../core/utils/animated_fade_slide.dart';
 
+import '../../data/models/intelligence/insight.dart';
+import '../../data/models/clinical/recovery_data_point.dart'; // Add this
+import '../../data/models/content/news_item.dart'; // Add this
+import 'widgets/insights_section.dart';
+
 class DashboardPage extends StatelessWidget {
   const DashboardPage({
     super.key,
     required this.snapshot,
+    required this.insights,
+    this.recoveryData = const [], // Optional default for now to avoid break if parent not updated immediately
+    this.news = const [], 
     required this.onAddWater,
     required this.onRemoveWater,
     required this.onLogActivity,
@@ -13,6 +21,9 @@ class DashboardPage extends StatelessWidget {
   });
 
   final HealthSnapshot snapshot;
+  final List<Insight> insights;
+  final List<RecoveryDataPoint> recoveryData;
+  final List<NewsItem> news;
   final VoidCallback onAddWater;
   final VoidCallback onRemoveWater;
   final VoidCallback onLogActivity;
@@ -29,6 +40,10 @@ class DashboardPage extends StatelessWidget {
         AnimatedFadeSlide(
           delay: const Duration(milliseconds: 80),
           child: _HeroCard(snapshot: snapshot),
+        ),
+        AnimatedFadeSlide(
+          delay: const Duration(milliseconds: 100),
+          child: InsightsSection(insights: insights),
         ),
         const SizedBox(height: 16),
         AnimatedFadeSlide(

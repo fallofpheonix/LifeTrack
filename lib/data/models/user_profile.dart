@@ -58,4 +58,14 @@ class UserProfile {
     final double val = (10 * weight) + (6.25 * height) - (5 * age) + sexVal;
     return val.toInt();
   }
+  factory UserProfile.empty() {
+    return UserProfile(
+      name: 'User',
+      age: 30,
+      weight: 70.0,
+      height: 170.0,
+      gender: 'Not specified',
+      bloodType: 'Unknown',
+    );
+  }
 }

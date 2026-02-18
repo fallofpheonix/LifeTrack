@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
-import '../../data/models/news_item.dart';
+import '../../data/models/content/news_item.dart';
 
 class NewsService {
   // ScienceDaily Medical Technology RSS
@@ -17,8 +17,10 @@ class NewsService {
           return NewsItem(
             title: node.findElements('title').single.innerText,
             link: node.findElements('link').single.innerText,
-            pubDate: node.findElements('pubDate').single.innerText,
-            description: node.findElements('description').single.innerText.replaceAll(RegExp(r'<[^>]*>'), ''), // Strip HTML
+            date: DateTime.tryParse(node.findElements('pubDate').single.innerText) ?? DateTime.now(),
+            summary: node.findElements('description').single.innerText.replaceAll(RegExp(r'<[^>]*>'), ''),
+            source: 'ScienceDaily',
+             id: node.findElements('guid').isNotEmpty ? node.findElements('guid').single.innerText : node.findElements('link').single.innerText,
           );
         }).toList();
       }

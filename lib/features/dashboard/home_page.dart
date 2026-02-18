@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/services/life_track_store.dart';
-import '../../data/models/meal_entry.dart';
 import '../../data/models/sleep_entry.dart';
-import '../../data/models/health_record_entry.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/models/activity_log.dart';
 import '../../data/models/activity_type.dart';
@@ -13,6 +12,7 @@ import '../nutrition/nutrition_page.dart';
 import '../reminders/reminder_page.dart';
 import '../medical/medical_page.dart';
 import '../profile/profile_page.dart';
+import '../vitals/vitals_page.dart';
 
 class LifeTrackHomePage extends StatefulWidget {
   const LifeTrackHomePage({super.key, required this.store});
@@ -53,100 +53,11 @@ class _LifeTrackHomePageState extends State<LifeTrackHomePage> {
     }
   }
 
-  void _showAddActivityDialog(BuildContext context) async {
-    final dynamic result = await showDialog(
-      context: context,
-      builder: (BuildContext context) => const AddActivityDialog(),
-    );
-    if (result != null && result is Map<String, dynamic>) {
-       // We need to implement this part in LifeTrackHomePage or handle it in ActivityPage based on callback
-       // Actually, we pass the logic via callback to ActivityPage, but here we can just call store
-       // Wait, AddActivityDialog is in ActivityPage.dart but we need it here for the Dashboard FAB action
-    }
-  }
+
 
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> pages = <Widget>[
-      DashboardPage(
-        snapshot: widget.store.snapshot,
-        onAddWater: () {
-          widget.store.addWaterGlass();
-        },
-        onRemoveWater: () {
-          widget.store.removeWaterGlass();
-        },
-        onLogActivity: () async {
-             // Reusing the dialog from ActivityPage
-             final dynamic result = await showDialog(
-               context: context,
-               builder: (BuildContext context) => const AddActivityDialog(),
-             );
-             if (result != null && result is Map<String, dynamic>) {
-                // We need to construct ActivityLog here.
-                // But we don't have access to models easily unless we import them.
-                // Ideally this logic should be in a controller, but for now:
-                // We'll just ignore for a sec and fix in main.dart proper or here.
-                // Actually, let's fix imports first.
-             }
-        },
-        onAddSleep: () async {
-          final dynamic result = await showDialog(
-            context: context,
-            builder: (BuildContext context) => const SleepLogDialog(),
-          );
-          if (result != null && result is Map<String, dynamic>) {
-             widget.store.addSleepLog(
-               SleepEntry(
-                 id: DateTime.now().microsecondsSinceEpoch.toString(),
-                 startTime: result['start'] as DateTime,
-                 endTime: result['end'] as DateTime,
-               ),
-             );
-          }
-        },
-      ),
-      ActivityPage(
-        activities: widget.store.activities,
-        onLogActivity: () async {
-            // Duplicate logic, should refactor
-            // For now, defined inline in ActivityPage
-        },
-        onDeleteActivity: (String id) => widget.store.deleteActivity(id),
-      ),
-      NutritionPage(
-        meals: widget.store.meals,
-        onAddMeal: (MealEntry meal) => widget.store.addMeal(meal),
-        onDeleteMeal: (String id) => widget.store.deleteMeal(id),
-      ),
-      ReminderPage(
-        reminders: widget.store.reminders,
-        onToggle: (int index, bool enabled) {
-          widget.store.toggleReminder(index, enabled);
-        },
-      ),
-      MedicalPage(
-        diseaseGuide: widget.store.diseaseGuide,
-        records: widget.store.records,
-        recoveryData: widget.store.recoveryData,
-        scientists: widget.store.scientists,
-        news: widget.store.news,
-        onAddRecord: (HealthRecordEntry entry) {
-          widget.store.addRecord(entry);
-        },
-        onDeleteRecord: (String id) {
-          widget.store.deleteRecord(id);
-        },
-      ),
-    ];
-
-    // FIX: Redefine the callback logic properly to avoid empty implementations above.
-    // The DashboardPage needs concrete callbacks.
-    // The ActivityPage handles its own dialog internally in its own build method? No, it takes a callback onLogActivity.
-    
-    // Let's restructure the pages list to use properly defined methods.
-    
     return Scaffold(
       appBar: AppBar(
         title: const Text('LifeTrack'),
@@ -197,6 +108,7 @@ class _LifeTrackHomePageState extends State<LifeTrackHomePage> {
             setState(() {
               _selectedIndex = index;
             });
+            HapticFeedback.selectionClick();
           },
           destinations: const <NavigationDestination>[
             NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
@@ -215,6 +127,9 @@ class _LifeTrackHomePageState extends State<LifeTrackHomePage> {
       case 0:
         return DashboardPage(
           snapshot: widget.store.snapshot,
+          insights: widget.store.insights,
+          recoveryData: widget.store.recoveryData,
+          news: widget.store.news,
           onAddWater: widget.store.addWaterGlass,
           onRemoveWater: widget.store.removeWaterGlass,
           onLogActivity: _selectActivity,
@@ -246,6 +161,7 @@ class _LifeTrackHomePageState extends State<LifeTrackHomePage> {
           news: widget.store.news,
           onAddRecord: widget.store.addRecord,
           onDeleteRecord: widget.store.deleteRecord,
+          onOpenVitals: _openVitalsPage,
         );
       default:
         return const SizedBox.shrink();
@@ -263,24 +179,21 @@ class _LifeTrackHomePageState extends State<LifeTrackHomePage> {
     // Oh wait, result['type'] is ActivityType. We need to cast it.
     
     if (result != null && result is Map<String, dynamic>) {
-       // We will rely on ActivityLog needing to be constructed.
-       // We need to import ActivityLog and ActivityType.
-       // See imports above.
-       
-       // Note: AddActivityDialog returns a map with 'type' as ActivityType.
-       // BUT we need to import ActivityType in this file to use it in casting?
-       // Actually dynamic dispatch might work but strictly we should import models.
-       
-       // I will update the imports in main.dart to include everything so this just works when copied.
-       // Wait, this file is lib/features/home/home_page.dart effectively.
-       
-       // Let's implement the logic assuming imports are clean.
-       
-       // Constructing ActivityLog:
-       // We need to access ActivityType. Since it's an enum, we just need to pass it.
-       
-       // widget.store.addActivity(ActivityLog(...)); 
-       // This requires imports. I'll add them.
+       final ActivityType type = result['type'] as ActivityType;
+       final DateTime start = result['start'] as DateTime; // Assuming dialog returns start
+       final int duration = result['duration'] as int;
+       final int calories = result['calories'] as int;
+
+       widget.store.addActivity(
+         ActivityLog(
+           id: DateTime.now().microsecondsSinceEpoch.toString(),
+           date: start,
+           durationMinutes: duration,
+           type: type,
+           name: type.toString().split('.').last, // Use type name as default name
+           caloriesBurned: calories,
+         ),
+       );
     }
   }
 
@@ -298,5 +211,20 @@ class _LifeTrackHomePageState extends State<LifeTrackHomePage> {
                ),
              );
           }
+  }
+
+  void _openVitalsPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => VitalsPage(
+          bpHistory: widget.store.bpHistory,
+          hrHistory: widget.store.hrHistory,
+          glucoseHistory: widget.store.glucoseHistory,
+          onAddBP: widget.store.addBloodPressure,
+          onAddHR: widget.store.addHeartRate,
+          onAddGlucose: widget.store.addGlucose,
+        ),
+      ),
+    );
   }
 }

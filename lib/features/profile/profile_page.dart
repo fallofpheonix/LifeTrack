@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import '../../data/models/user_profile.dart';
 import '../../data/models/weight_entry.dart';
-import 'dart:math';
-import 'package:intl/intl.dart';
+import '../settings/settings_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -90,7 +89,7 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () {
               final double? val = double.tryParse(weightInputController.text);
               if (val != null) {
-                widget.onAddWeight(WeightEntry(date: DateTime.now(), weight: val));
+                widget.onAddWeight(WeightEntry(date: DateTime.now().toUtc(), weightKg: val));
                 _weightController.text = val.toString(); // Sync with profile input
                 Navigator.pop(context);
               }
@@ -123,7 +122,21 @@ class _ProfilePageState extends State<ProfilePage> {
     final int bmr = widget.userProfile.bmr;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Profile')),
+      appBar: AppBar(
+        title: const Text('My Profile'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (BuildContext context) => const SettingsPage(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: <Widget>[
@@ -321,8 +334,8 @@ class WeightChartPainter extends CustomPainter {
     }
 
     // Determine Y range
-    double minWeight = entries.fold(999.0, (min, e) => e.weight < min ? e.weight : min);
-    double maxWeight = entries.fold(0.0, (max, e) => e.weight > max ? e.weight : max);
+    double minWeight = entries.fold(999.0, (min, e) => e.weightKg < min ? e.weightKg : min);
+    double maxWeight = entries.fold(0.0, (max, e) => e.weightKg > max ? e.weightKg : max);
     
     // Add padding to range
     if (maxWeight == minWeight) {
@@ -347,7 +360,7 @@ class WeightChartPainter extends CustomPainter {
     for (int i = 0; i < entries.length; i++) {
         final double x = i * xStep;
         // Normalize weight to 0..1 then scale to height (inverted y)
-        final double normalizedY = (entries[i].weight - minWeight) / yRange;
+        final double normalizedY = (entries[i].weightKg - minWeight) / yRange;
         final double y = size.height - (normalizedY * size.height);
         
         if (i == 0) {
@@ -362,7 +375,7 @@ class WeightChartPainter extends CustomPainter {
         if (i == 0 || i == entries.length - 1) {
              final TextSpan span = TextSpan(
                  style: const TextStyle(color: Colors.black, fontSize: 10),
-                 text: '${entries[i].weight}kg',
+                 text: '${entries[i].weightKg}kg',
              );
              final TextPainter tp = TextPainter(
                  text: span,

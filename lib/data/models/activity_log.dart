@@ -1,13 +1,28 @@
+import 'base_health_entry.dart';
+import 'enums/data_source.dart';
 import 'activity_type.dart';
 
-class ActivityLog {
+class ActivityLog extends BaseHealthEntry {
   ActivityLog({
     required this.id,
     required this.type,
     required this.name,
     required this.durationMinutes,
     required this.caloriesBurned,
-  });
+    required DateTime date,
+    DataSource source = DataSource.manual,
+    DateTime? createdAt,
+    DateTime? editedAt,
+    DateTime? deletedAt,
+    int entityVersion = 1,
+  }) : super(
+          date: date,
+          source: source,
+          createdAt: createdAt,
+          editedAt: editedAt,
+          deletedAt: deletedAt,
+          entityVersion: entityVersion,
+        );
 
   final String id;
   final ActivityType type;
@@ -22,6 +37,7 @@ class ActivityLog {
       'name': name,
       'durationMinutes': durationMinutes,
       'caloriesBurned': caloriesBurned,
+      ...toBaseJson(),
     };
   }
 
@@ -32,6 +48,12 @@ class ActivityLog {
       name: json['name'] as String? ?? 'Activity',
       durationMinutes: json['durationMinutes'] as int? ?? 0,
       caloriesBurned: json['caloriesBurned'] as int? ?? 0,
+      date: json['date'] != null ? DateTime.parse(json['date'] as String) : DateTime.now(),
+      source: DataSource.values.asNameMap()[json['source']] ?? DataSource.manual,
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+      editedAt: json['editedAt'] != null ? DateTime.parse(json['editedAt'] as String) : null,
+      deletedAt: json['deletedAt'] != null ? DateTime.parse(json['deletedAt'] as String) : null,
+      entityVersion: json['entityVersion'] as int? ?? 1,
     );
   }
 }

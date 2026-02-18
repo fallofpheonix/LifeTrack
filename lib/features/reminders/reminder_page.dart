@@ -10,7 +10,7 @@ class ReminderPage extends StatelessWidget {
   });
 
   final List<ReminderItem> reminders;
-  final void Function(int index, bool enabled) onToggle;
+  final void Function(String id) onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +39,7 @@ class ReminderPage extends StatelessWidget {
           child: Card(
             child: SwitchListTile(
               value: reminder.enabled,
-              onChanged: (bool enabled) => onToggle(reminderIndex, enabled),
+              onChanged: (bool enabled) => onToggle(reminder.id),
               title: Text(reminder.title),
               subtitle: Text(reminder.timeLabel),
             ),
