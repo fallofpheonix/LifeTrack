@@ -101,6 +101,14 @@ Feature/domain-oriented structure (within `lib/`):
 - **`features/`**: UI features (`dashboard`, `activity`, `nutrition`, `medical`, `profile`, `settings`, `vitals`, `hydration`).
 - **`main.dart`**: Initialization, secure serializer wiring, app bootstrap.
 
+## Documentation
+
+- **Master Index**: [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)
+- **Project**: [PROJECT_DETAILS.md](PROJECT_DETAILS.md), [MOTIVE_AND_OBJECTIVES.md](MOTIVE_AND_OBJECTIVES.md), [REQUIREMENTS.md](REQUIREMENTS.md), [CURRENT_STATUS.md](CURRENT_STATUS.md), [TASK_TRACKER.md](TASK_TRACKER.md)
+- **Technical**: [TECHNOLOGIES.md](TECHNOLOGIES.md), [INTERVIEW_QUESTIONS.md](INTERVIEW_QUESTIONS.md), [TECHNOLOGY_REPORT_AND_QA.md](TECHNOLOGY_REPORT_AND_QA.md), [SETUP.md](SETUP.md)
+- **Roadmap/Strategy**: [FUTURE_SCOPE.md](FUTURE_SCOPE.md), [FUTURE_CHANGES.md](FUTURE_CHANGES.md), [POTENTIAL_AND_IMPACT.md](POTENTIAL_AND_IMPACT.md), [FUTURE_WORKS.md](FUTURE_WORKS.md)
+- **History**: [CHANGELOG.md](CHANGELOG.md)
+
 ## Contributing
 
 Contributions are welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
