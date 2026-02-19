@@ -8,6 +8,7 @@ This document outlines the technical architecture, challenges encountered, and p
 *   **Framework**: Flutter (SDK ^3.10.8)
 *   **Language**: Dart
 *   **Architecture**: Service-Repository Pattern with Offline-First design.
+*   **Current Runtime Model**: `LifeTrackStore` + Riverpod providers with encrypted local persistence.
 
 ### Key Libraries & Packages
 *   **State Management**: 
@@ -50,6 +51,19 @@ This document outlines the technical architecture, challenges encountered, and p
 **Solution**:
 *   Implemented `DataGovernanceService` to enforce retention policies.
 *   `enforceRetentionPolicy()` checks creation dates and automatically performs soft-deletes on expired data.
+
+### E. Profile Domain Expansion
+**Problem**: User profile lacked clinically useful context (allergies, emergency and insurance metadata).
+**Solution**:
+*   Extended `UserProfile` schema and serialization for medical metadata.
+*   Added `MedicalDetailsSection` UI to manage profile medical fields.
+*   Updated profile save paths to preserve newly added fields.
+
+### F. Load/Stress Validation Data
+**Problem**: Manual test data entry is too slow for stress testing charts and history pages.
+**Solution**:
+*   Added `PatientSeeder` service to generate 50-100 synthetic entries across weight, BP, HR, and activities.
+*   Added profile-page Developer Option to trigger seeding directly from app UI.
 
 ---
 

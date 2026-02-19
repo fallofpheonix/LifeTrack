@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui' as ui;
 import 'package:lifetrack/core/ui/base_card.dart'; // Added import
 import 'package:lifetrack/data/models/user_profile.dart';
+import 'package:lifetrack/features/profile/widgets/medical_details_section.dart';
+import 'package:lifetrack/core/services/seeder/patient_seeder.dart';
 import 'package:lifetrack/data/models/weight_entry.dart';
 import 'package:lifetrack/core/state/store_provider.dart';
 import 'package:lifetrack/features/settings/settings_page.dart';
@@ -65,7 +67,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       height: double.tryParse(_heightController.text) ?? currentProfile.height,
       gender: _genderController.text.trim(),
       bloodType: _bloodController.text.trim(),
-      // Preserve others
+      medicalHistory: currentProfile.medicalHistory,
+      allergies: currentProfile.allergies,
+      emergencyContactName: currentProfile.emergencyContactName,
+      emergencyContactPhone: currentProfile.emergencyContactPhone,
+      emergencyContactRelation: currentProfile.emergencyContactRelation,
+      insuranceProvider: currentProfile.insuranceProvider,
+      insurancePolicyNumber: currentProfile.insurancePolicyNumber,
       createdAt: currentProfile.createdAt,
       updatedAt: DateTime.now(), 
     );
@@ -291,6 +299,41 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                  ),
                ),
              ],
+          ),
+          const SizedBox(height: 24),
+          const MedicalDetailsSection(),
+          const SizedBox(height: 24),
+          BaseCard(
+            child: ListTile(
+              leading: const Icon(Icons.science, color: Colors.orange),
+              title: const Text('Developer Options'),
+              subtitle: const Text('Generate random health data for testing'),
+              trailing: IconButton(
+                icon: const Icon(Icons.play_circle_fill),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Generate Data?'),
+                      content: const Text('This will add 50-100 random records to your history. This cannot be easily undone.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Generate')),
+                      ],
+                    ),
+                  );
+                  
+                  if (confirm == true) {
+                     // ignore: use_build_context_synchronously
+                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Generating data...')));
+                     final seeder = PatientSeeder(store);
+                     await seeder.seedData();
+                     // ignore: use_build_context_synchronously
+                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data generation complete!')));
+                  }
+                },
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           FilledButton.icon(

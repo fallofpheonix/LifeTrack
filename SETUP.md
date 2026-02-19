@@ -32,15 +32,14 @@ Must report:
 ## Flutter
 
 Recommended version:
-Flutter 3.19.x (stable channel)
+Flutter 3.10.8+ (stable channel, tested on 3.38.9)
 
 Check version:
 flutter --version
 
 If different:
 flutter upgrade
-or
-flutter downgrade 3.19.x
+or pin an explicit compatible version via FVM/tooling policy.
 
 ---
 

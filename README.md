@@ -31,6 +31,7 @@ A dedicated space for managing chronic conditions:
 - **Disease Guide**: Access educational information on symptoms and precautions for various conditions.
 - **Health Records**: Securely store dated records of your condition, vitals, and notes.
 - **Recovery Graph**: Visualize your health trends (e.g., Fasting vs. Post-Meal Glucose) to see your progress over time.
+- **Medical Profile Details**: Store allergies, medical history, emergency contact, and insurance metadata.
 
 ### ⏰ Smart Reminders
 Never miss a beat with customizable alerts:
@@ -52,20 +53,24 @@ Never miss a beat with customizable alerts:
 - **Local Encryption**: Sensitive data is encrypted on-device.
 - **Data Governance**: Automatic retention policies and full data export capabilities.
 - **Offline First**: Full functionality without internet connection.
+- **Developer Seeder**: Optional synthetic patient data generation for stress/performance testing.
 
 ## Tech Stack
 
 - **Framework**: [Flutter](https://flutter.dev/) (Dart)
-- **State Management**: `setState` (MVP Architecture) / Modular Widgets
+- **State Management**: `flutter_riverpod` + `provider` (`LifeTrackStore` as central state holder)
 - **Local Storage**: `shared_preferences`
+- **Security**: `flutter_secure_storage`, `encrypt`
+- **Visualization**: `fl_chart`
 - **Architecture**: Domain-driven feature separation.
 
 ## Getting Started
 
 ### Prerequisites
-- **Flutter SDK**: `^3.10.8`
+- **Flutter SDK**: `>=3.10.8` (tested on `3.38.9`)
 - **Dart SDK**: Compatible with Flutter version.
 - **IDE**: Android Studio / VS Code / IntelliJ.
+- **Java**: 21 (required for Android toolchain reliability).
 
 ### Installation
 
@@ -87,14 +92,14 @@ Never miss a beat with customizable alerts:
 
 ## Project Structure
 
-The project follows a clean, feature-based directory structure (within `lib/`):
+Feature/domain-oriented structure (within `lib/`):
 
-- **`main.dart`**: Entry point and core app logic.
-- **`DashboardPage`**: Main overview screen.
-- **`ActivityPage`**: Activity logging and history.
-- **`NutritionPage`**: Meal and calorie tracking.
-- **`MedicalPage`**: Disease guide and health records.
-- **`ReminderPage`**: Reminder settings and management.
+- **`app/`**: App shell and navigation.
+- **`core/`**: Shared services, state providers, storage, encryption, sync/intelligence utilities.
+- **`data/`**: Models and repositories.
+- **`domain/`**: Education content and domain providers.
+- **`features/`**: UI features (`dashboard`, `activity`, `nutrition`, `medical`, `profile`, `settings`, `vitals`, `hydration`).
+- **`main.dart`**: Initialization, secure serializer wiring, app bootstrap.
 
 ## Contributing
 

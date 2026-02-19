@@ -11,6 +11,7 @@ The rise of chronic health conditions has created a need for effective, personal
 *   **Personalized Guidance**: Receive custom fitness and diet plans based on user data.
 *   **Interactive Engagement**: Set goals and receive reminders for medication and hydration.
 *   **Progress Visualization**: View clear logs and charts to track health improvements over time.
+*   **Medical Context Capture**: Store allergies, medical history, emergency contact, and insurance details.
 
 ## 4. Scope
 LifeTrack is designed for a broad audience, from fitness enthusiasts to patients managing chronic conditions. Future roadmaps include AI-powered insights, broader wearable integration, and expanded support for medical conditions.
@@ -31,6 +32,7 @@ LifeTrack utilizes a modern, cross-platform technology stack to ensure performan
 *   **Offline-First**: The app is architected to function fully without an internet connection, syncing data when connectivity is restored.
 *   **User Personas**: key design decisions were driven by personas representing diverse needs (e.g., "The Busy Professional", "The Diabetes Patient").
 *   **Scalability**: The modular code structure allows for easy addition of new features like "Telemedicine" or "Community Challenges" in the future.
+*   **Stress Testing Support**: Synthetic patient record seeding is available for high-volume UI and trend validation.
 
 ## 7. Comparative Analysis
 Compared to existing solutions, LifeTrack focuses heavily on:

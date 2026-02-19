@@ -16,7 +16,7 @@ This document outlines the strategic roadmap for the LifeTrack application, deta
 ### 🏥 Telemedicine & Professional Integration
 *   **Doctor Dashboard**: A web portal for healthcare providers to view patient data (with consent).
 *   **PDF Report Generation**: One-click generation of comprehensive health reports to share with doctors during visits.
-*   **Appointment Styling**: Integration with calendar APIs to manage medical appointments.
+*   **Appointment Scheduling**: Integration with calendar APIs to manage medical appointments.
 
 ### 👥 Social & Community
 *   **Group Challenges**: "Step Battles" and "Hydration Streaks" with friends.

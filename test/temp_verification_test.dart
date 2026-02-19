@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifetrack/data/models/medication/medication.dart';
 import 'package:lifetrack/core/validation/health_validator.dart';
+import 'package:lifetrack/data/models/enums/data_source.dart';
 
 import 'package:lifetrack/data/models/enums/frequency_type.dart';
 
@@ -17,9 +18,9 @@ void main() {
       );
 
       expect(meds.date, now);
-      expect(meds.source, 'manual'); // Assuming toString matches or enum default
+      expect(meds.source, DataSource.manual);
       expect(meds.isDeleted, false);
-      expect(meds.createdAt, null); // Default is null if not provided? Or now?
+      expect(meds.createdAt, isNotNull);
     });
 
     test('should serialize and deserialize correctly', () {
@@ -45,16 +46,16 @@ void main() {
 
   group('HealthValidator', () {
     test('validateBloodPressure', () {
-      expect(HealthValidator.validateBloodPressure(120, 80), null);
-      expect(HealthValidator.validateBloodPressure(null, 80), isNotNull);
-      expect(HealthValidator.validateBloodPressure(40, 80), isNotNull); // Sys too low
-      expect(HealthValidator.validateBloodPressure(120, 130), isNotNull); // Dia > Sys
+      expect(HealthValidator.validateBloodPressure(120, 80).isValid, isTrue);
+      expect(HealthValidator.validateBloodPressure(null, 80).isValid, isFalse);
+      expect(HealthValidator.validateBloodPressure(40, 80).isValid, isFalse); // Sys too low
+      expect(HealthValidator.validateBloodPressure(120, 130).isValid, isFalse); // Dia > Sys
     });
 
     test('validateHeartRate', () {
-      expect(HealthValidator.validateHeartRate(60), null);
-      expect(HealthValidator.validateHeartRate(20), isNotNull);
-      expect(HealthValidator.validateHeartRate(300), isNotNull);
+      expect(HealthValidator.validateHeartRate(60).isValid, isTrue);
+      expect(HealthValidator.validateHeartRate(20).isValid, isFalse);
+      expect(HealthValidator.validateHeartRate(300).isValid, isFalse);
     });
   });
 }

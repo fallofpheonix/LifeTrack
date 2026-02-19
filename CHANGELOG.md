@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `UserProfile` medical metadata fields:
+  - `medicalHistory`, `allergies`
+  - `emergencyContactName`, `emergencyContactPhone`, `emergencyContactRelation`
+  - `insuranceProvider`, `insurancePolicyNumber`
+- New profile UI widget: `lib/features/profile/widgets/medical_details_section.dart`
+  - Editable emergency contact and insurance blocks
+  - Editable allergy chips and medical history list
+  - Persist updates through `LifeTrackStore.updateProfile(...)`
+- New synthetic data generator: `lib/core/services/seeder/patient_seeder.dart`
+  - Seeds 50-100 records for weight, blood pressure, heart rate, and activities
+  - Uses store write APIs for persisted test/stress data
+
+### Changed
+- `lib/features/profile/profile_page.dart`
+  - Integrated `MedicalDetailsSection` into profile page layout
+  - Preserved extended medical fields during profile save flow
+  - Added Developer Options action to trigger patient data generation from UI
+- `lib/data/models/user_profile.dart`
+  - Extended constructor, fields, `toJson`, and `fromJson` for medical/contact/insurance persistence
+- Documentation alignment with current codebase:
+  - Updated `README.md` (state model, stack, prerequisites, structure, medical/profile coverage)
+  - Updated `SETUP.md` Flutter version guidance
+  - Updated `TECHNOLOGY_REPORT_AND_QA.md` with profile-domain expansion + seeder notes
+  - Updated `RESEARCH_SUMMARY.md` objectives/system highlights
+  - Corrected wording in `FUTURE_WORKS.md` (`Appointment Scheduling`)
 
 ## [1.1.0] - 2026-02-18
 
