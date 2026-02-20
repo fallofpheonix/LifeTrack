@@ -1,0 +1,8 @@
+[
+  {"metric":"Blood Pressure","value":"126/82 mmHg","trend":"down","time":"2h ago","date":"2026-02-20"},
+  {"metric":"Sleep","value":"7h 20m","trend":"up","time":"5h ago","date":"2026-02-20"},
+  {"metric":"Steps","value":"8420","trend":"up","time":"1h ago","date":"2026-02-20"},
+  {"metric":"Heart Rate Variability","value":"46 ms","trend":"up","time":"3h ago","date":"2026-02-20"},
+  {"metric":"Water Intake","value":"2.1 L","trend":"up","time":"45m ago","date":"2026-02-20"},
+  {"metric":"Weight","value":"74.8 kg","trend":"down","time":"19h ago","date":"2026-02-19"}
+]

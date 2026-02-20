@@ -1,83 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lifetrack/domain/education/providers.dart';
-import 'package:lifetrack/domain/education/models/scientist.dart';
-import 'package:lifetrack/domain/education/models/evidence.dart';
 import 'package:lifetrack/core/ui/base_card.dart';
-import 'package:lifetrack/core/ui/section_header.dart';
+import 'package:lifetrack/domain/education/models/pioneer.dart';
+import 'package:lifetrack/domain/education/models/research_item.dart';
+import 'package:lifetrack/features/medical/widgets/did_you_know_banner.dart';
+import 'package:lifetrack/presentation/medical/providers/medical_providers.dart';
 
 class ResearchTab extends ConsumerWidget {
   const ResearchTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final evidenceAsync = ref.watch(allEvidenceProvider);
-    final scientistsAsync = ref.watch(scientistProvider);
+    final pioneersAsync = ref.watch(pioneersProvider);
+    final feedAsync = ref.watch(insightsFeedProvider);
+    final factAsync = ref.watch(didYouKnowProvider);
+    final String? fact = factAsync.asData?.value;
 
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
-        const SectionHeader(title: 'Latest Evidence'),
-        evidenceAsync.when(
-          data: (List<Evidence> evidenceList) => Column(
-            children: evidenceList.map((e) => _EvidenceCard(evidence: e)).toList(),
-          ),
+      children: <Widget>[
+        Text('Medical Pioneers', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 10),
+        pioneersAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, __) => Text('Error loading evidence: $e'),
+          error: (Object error, StackTrace stackTrace) => const SizedBox.shrink(),
+          data: (List<Pioneer> pioneers) => Column(
+              children: List<Widget>.generate(pioneers.length, (int i) {
+                return TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: 1),
+                  duration: Duration(milliseconds: 260 + (i * 70)),
+                  curve: Curves.easeOutCubic,
+                  builder: (BuildContext context, double value, Widget? child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.translate(offset: Offset(0, (1 - value) * 12), child: child),
+                    );
+                  },
+                  child: _PioneerCard(profile: pioneers[i]),
+                );
+              }),
+            ),
         ),
-        const SizedBox(height: 24),
-        const SectionHeader(title: 'Pioneers'),
-        scientistsAsync.when(
-          data: (List<Scientist> scientists) => Column(
-            children: scientists.map((s) => _ScientistCard(scientist: s)).toList(),
-          ),
+        if (fact != null) DidYouKnowBanner(text: fact),
+        Text('Latest Evidence', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 10),
+        feedAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, __) => Text('Error loading scientists: $e'),
+          error: (Object error, StackTrace stackTrace) => const SizedBox.shrink(),
+          data: (List<ResearchItem> updates) => Column(
+              children: List<Widget>.generate(updates.length, (int i) {
+                return TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: 1),
+                  duration: Duration(milliseconds: 260 + (i * 60)),
+                  curve: Curves.easeOutCubic,
+                  builder: (BuildContext context, double value, Widget? child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.translate(offset: Offset(0, (1 - value) * 10), child: child),
+                    );
+                  },
+                  child: _EvidenceFeedCard(update: updates[i]),
+                );
+              }),
+            ),
         ),
       ],
     );
   }
 }
 
-class _EvidenceCard extends StatelessWidget {
-  final Evidence evidence;
+class _PioneerCard extends StatelessWidget {
+  const _PioneerCard({required this.profile});
 
-  const _EvidenceCard({required this.evidence});
+  final Pioneer profile;
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
     return BaseCard(
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.science, color: Theme.of(context).colorScheme.primary, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                '${evidence.year} • ${evidence.sourceType.toUpperCase()}',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
-              ),
-              const Spacer(),
-              Text(
-                '${(evidence.confidence * 100).toInt()}% Conf.',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.green),
-              ),
-            ],
+        children: <Widget>[
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: scheme.primaryContainer,
+            backgroundImage: AssetImage(profile.imageAsset),
           ),
-          const SizedBox(height: 8),
-          Text(
-            evidence.statement,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: evidence.relatedMetrics.map((m) => Chip(
-              label: Text(m, style: const TextStyle(fontSize: 10)),
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
-            )).toList(),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(profile.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(profile.contribution, style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 6),
+                Text('Why it matters: ${profile.relevance}', style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
           ),
         ],
       ),
@@ -85,34 +105,32 @@ class _EvidenceCard extends StatelessWidget {
   }
 }
 
-class _ScientistCard extends StatelessWidget {
-  final Scientist scientist;
+class _EvidenceFeedCard extends StatelessWidget {
+  const _EvidenceFeedCard({required this.update});
 
-  const _ScientistCard({required this.scientist});
+  final ResearchItem update;
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
     return BaseCard(
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-             radius: 24,
-             backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-             child: Text(scientist.name[0], style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.science_outlined, color: scheme.primary, size: 18),
+              const SizedBox(width: 8),
+              Chip(
+                visualDensity: VisualDensity.compact,
+                label: Text(update.source, style: Theme.of(context).textTheme.labelSmall),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(scientist.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(scientist.domain, style: Theme.of(context).textTheme.labelSmall),
-                const SizedBox(height: 4),
-                Text(scientist.fact, style: Theme.of(context).textTheme.bodyMedium),
-              ],
-            ),
-          ),
+          const SizedBox(height: 8),
+          Text(update.title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(update.impact, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );

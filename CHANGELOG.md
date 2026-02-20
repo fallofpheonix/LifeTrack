@@ -30,12 +30,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `POTENTIAL_AND_IMPACT.md`
   - `TASK_TRACKER.md`
   - `CURRENT_STATUS.md`
+- Offline Medical Hub dataset pack under `assets/medical/`:
+  - `diseases.json`, `research.json`, `pioneers.json`, `mock_records.json`, `facts.json`
+  - Pioneer portraits under `assets/medical/pioneers/`
+- Education domain models for Medical Hub content:
+  - `lib/domain/education/models/disease.dart`
+  - `lib/domain/education/models/research_item.dart`
+  - `lib/domain/education/models/pioneer.dart`
+  - `lib/domain/education/models/mock_health_record.dart`
+- Single JSON asset loader:
+  - `lib/data/education/education_data_source.dart`
+- Medical Hub provider graph:
+  - `lib/presentation/medical/providers/medical_providers.dart`
+  - `personalLogProvider`, `rotatingDiseaseProvider`, `insightsFeedProvider`, `pioneersProvider`, `didYouKnowProvider`
+- Medical Hub isolation tests using fake repository injection:
+  - `test/fakes/fake_education_repository.dart`
+  - `test/medical/medical_providers_test.dart`
+  - `test/medical/health_library_tab_test.dart`
 
 ### Changed
 - `lib/features/profile/profile_page.dart`
   - Integrated `MedicalDetailsSection` into profile page layout
   - Preserved extended medical fields during profile save flow
   - Added Developer Options action to trigger patient data generation from UI
+- Medical Hub tabs are now fully provider-driven (no feature-local JSON loader/FutureBuilder data source):
+  - `lib/features/medical/tabs/my_records_tab.dart`
+  - `lib/features/medical/tabs/learn_tab.dart`
+  - `lib/features/medical/tabs/research_tab.dart`
+- Medical Hub labels finalized for presentation framing:
+  - `Records` -> `Personal Log`
+  - `Learn` -> `Health Library`
+  - `Research` -> `Insights`
+- Education repository/service extended for offline rotating content:
+  - `lib/domain/education/repositories/education_repository.dart`
+  - `lib/domain/education/repositories/education_repository_impl.dart`
+  - `lib/domain/education/services/education_service.dart`
+- Theme/UI polish and interaction updates:
+  - Clinical palette and semantic surfaces in `lib/core/theme/app_theme.dart`
+  - Card micro-interaction scale effect in `lib/core/ui/base_card.dart`
+- Minor lint-hardening updates:
+  - `tool/perf_guard.dart`
+  - `lib/features/dashboard/dashboard_page.dart`
+
+### Removed
+- Removed feature-local duplicate medical content loader:
+  - `lib/features/medical/data/offline_medical_content.dart`
+- Removed profile developer seeding action from UI surface:
+  - `lib/features/profile/profile_page.dart` (Developer Options card/button)
 - `lib/data/models/user_profile.dart`
   - Extended constructor, fields, `toJson`, and `fromJson` for medical/contact/insurance persistence
 - `test/temp_verification_test.dart`

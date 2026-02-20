@@ -1,7 +1,7 @@
 import 'dart:io';
 
 void main() async {
-  print('Running Performance Guard...');
+  stdout.writeln('Running Performance Guard...');
   
   // This is a placeholder for the actual performance test.
   // In a real scenario, this would import the store/snapshot mechanism and benchark it.
@@ -16,16 +16,20 @@ void main() async {
   for (int i = 0; i < 100000; i++) {
     sum += i;
   }
+  // Keep computation observable for lint and script sanity.
+  if (sum == -1) {
+    exit(2);
+  }
   
   stopwatch.stop();
   final int elapsed = stopwatch.elapsedMilliseconds;
   
-  print('Snapshot Build Simulation: ${elapsed}ms');
+  stdout.writeln('Snapshot Build Simulation: ${elapsed}ms');
   
   if (elapsed > 100) {
-    print('FAILURE: Snapshot build too slow (>20ms budget equivalent)');
+    stdout.writeln('FAILURE: Snapshot build too slow (>20ms budget equivalent)');
     exit(1);
   }
   
-  print('Performance Guard Passed.');
+  stdout.writeln('Performance Guard Passed.');
 }

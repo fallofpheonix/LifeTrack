@@ -16,9 +16,9 @@ class MedicalPage extends StatelessWidget {
           title: const Text('Medical Hub'),
           bottom: const TabBar(
             tabs: [
-              Tab(text: 'Records'),
-              Tab(text: 'Learn'),
-              Tab(text: 'Research'),
+              Tab(text: 'Personal Log'),
+              Tab(text: 'Health Library'),
+              Tab(text: 'Insights'),
             ],
           ),
         ),

@@ -42,7 +42,7 @@ class _QuoteSection extends ConsumerWidget {
     return quoteAsync.when(
       data: (quote) => quote != null ? QuoteBanner(quote: quote) : const SizedBox.shrink(),
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (Object error, StackTrace stackTrace) => const SizedBox.shrink(),
     );
   }
 }

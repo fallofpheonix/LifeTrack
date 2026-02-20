@@ -1,0 +1,7 @@
+[
+  {"name":"Alexander Fleming","contribution":"Discovered penicillin and transformed infection treatment.","relevance":"Enabled modern antibiotic-era medicine.","image":"alexander_fleming.jpg"},
+  {"name":"Louis Pasteur","contribution":"Established germ theory and vaccination foundations.","relevance":"Core to preventive infectious disease care.","image":"louis_pasteur.jpg"},
+  {"name":"Florence Nightingale","contribution":"Standardized nursing and hygiene-centered hospital care.","relevance":"Improved safety and quality in clinical systems.","image":"florence_nightingale.jpg"},
+  {"name":"Hippocrates","contribution":"Advanced structured clinical observation and ethics.","relevance":"Foundation for patient-centered medical practice.","image":"hippocrates.jpg"},
+  {"name":"Marie Curie","contribution":"Pioneered radioactivity science for diagnosis and therapy.","relevance":"Radiology and oncology rely on this groundwork.","image":"marie_curie.jpg"}
+]
