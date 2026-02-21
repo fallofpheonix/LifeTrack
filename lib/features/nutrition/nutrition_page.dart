@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lifetrack/core/state/store_provider.dart';
+import 'package:lifetrack/core/theme/app_colors_extension.dart';
 import 'package:lifetrack/core/ui/base_card.dart';
 import 'package:lifetrack/core/ui/empty_state.dart';
 import 'package:lifetrack/data/models/meal_entry.dart';
 import 'package:lifetrack/core/utils/animated_fade_slide.dart';
 import 'package:lifetrack/core/ui/app_page_layout.dart';
+import 'package:lifetrack/design_system/tokens/app_spacing.dart';
 
 class NutritionPage extends ConsumerWidget {
   const NutritionPage({super.key});
@@ -60,7 +62,7 @@ class NutritionPage extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         BaseCard(
           child: ListTile(
             leading: const CircleAvatar(child: Icon(Icons.restaurant)),
@@ -68,7 +70,7 @@ class NutritionPage extends ConsumerWidget {
             subtitle: Text('Consumed calories: $totalCalories kcal'),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         if (meals.isEmpty)
            const Padding(
              padding: EdgeInsets.only(top: 40),
@@ -81,17 +83,22 @@ class NutritionPage extends ConsumerWidget {
             return AnimatedFadeSlide(
               delay: Duration(milliseconds: 100 + (index * 45)),
               child: BaseCard(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFFDFF2EC),
-                    child: Icon(_mealIcon(meal.mealType), color: const Color(0xFF1D8A6F)),
-                  ),
-                  title: Text('${meal.mealType}: ${meal.title}'),
-                  subtitle: Text('${meal.calories} kcal'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    onPressed: () => store.deleteMeal(meal.id),
-                  ),
+                child: Builder(
+                  builder: (context) {
+                    final c = context.appColors;
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: c.accentRecovery.withValues(alpha: 0.2),
+                        child: Icon(_mealIcon(meal.mealType), color: c.accentRecovery),
+                      ),
+                      title: Text('${meal.mealType}: ${meal.title}'),
+                      subtitle: Text('${meal.calories} kcal'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        onPressed: () => store.deleteMeal(meal.id),
+                      ),
+                    );
+                  },
                 ),
               ),
             );
@@ -181,7 +188,7 @@ class _MealCalculatorDialogState extends State<MealCalculatorDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   const Text('Total:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('$total kcal', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1D8A6F))),
+                  Text('$total kcal', style: TextStyle(fontWeight: FontWeight.bold, color: context.appColors.accentRecovery)),
                 ],
               ),
             ),

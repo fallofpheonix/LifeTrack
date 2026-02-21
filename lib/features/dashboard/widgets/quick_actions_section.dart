@@ -1,88 +1,55 @@
 import 'package:flutter/material.dart';
-import 'package:lifetrack/core/ui/base_card.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lifetrack/core/state/store_provider.dart';
+import 'package:lifetrack/data/models/activity_log.dart';
+import 'package:lifetrack/data/models/activity_type.dart';
+import 'package:lifetrack/data/models/sleep_entry.dart';
+import 'package:lifetrack/design_system/components/action_card.dart';
+import 'package:lifetrack/features/activity/widgets/add_activity_dialog.dart';
+import 'package:lifetrack/features/dashboard/widgets/log_sleep_sheet.dart';
 
-class QuickActionsSection extends StatelessWidget {
+class QuickActionsSection extends ConsumerWidget {
   const QuickActionsSection({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.read(lifeTrackStoreProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       children: [
         Expanded(
-          child: BaseCard(
-            onTap: () {
-              // Show Activity Sheet
-               showModalBottomSheet(
-                 context: context,
-                 isScrollControlled: true,
-                 builder: (context) => DraggableScrollableSheet(
-                   initialChildSize: 0.6,
-                   minChildSize: 0.4,
-                   maxChildSize: 0.9,
-                   expand: false,
-                   builder: (context, scrollController) => ListView(
-                     controller: scrollController,
-                     padding: const EdgeInsets.all(24),
-                     children: [
-                       Text('Log Activity', style: Theme.of(context).textTheme.headlineSmall),
-                       const SizedBox(height: 16),
-                       const TextField(decoration: InputDecoration(labelText: 'Activity Type', hintText: 'e.g., Running')),
-                       const SizedBox(height: 16),
-                       const TextField(decoration: InputDecoration(labelText: 'Duration (min)', hintText: '30')),
-                       const SizedBox(height: 24),
-                       FilledButton(
-                         onPressed: () => Navigator.pop(context),
-                         child: const Text('Save Activity'),
-                       ),
-                     ],
-                   ),
-                 ),
-               );
+          child: ActionCard(
+            icon: Icons.directions_run,
+            label: 'Log Run',
+            iconColor: colorScheme.primary,
+            onTap: () async {
+              final result = await showAddActivityDialog(context);
+              if (result != null && context.mounted) {
+                final log = ActivityLog(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  type: result['type'] as ActivityType,
+                  name: (result['type'] as ActivityType).displayName,
+                  durationMinutes: result['duration'] as int,
+                  caloriesBurned: result['calories'] as int,
+                  date: DateTime.now(),
+                );
+                store.addActivity(log);
+              }
             },
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.directions_run, size: 32, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(height: 8),
-                Text('Log Run', style: Theme.of(context).textTheme.labelLarge),
-              ],
-            ),
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: BaseCard(
+          child: ActionCard(
+            icon: Icons.bedtime,
+            label: 'Add Sleep',
+            iconColor: colorScheme.secondary,
             onTap: () {
-              // Show Sleep Sheet
-               showModalBottomSheet(
-                 context: context,
-                 builder: (context) => Container(
-                   padding: const EdgeInsets.all(24),
-                   child: Column(
-                     mainAxisSize: MainAxisSize.min,
-                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                     children: [
-                       Text('Log Sleep', style: Theme.of(context).textTheme.headlineSmall),
-                       const SizedBox(height: 16),
-                       const TextField(decoration: InputDecoration(labelText: 'Hours Slept', hintText: '8.0')),
-                       const SizedBox(height: 24),
-                       FilledButton(
-                         onPressed: () => Navigator.pop(context),
-                         child: const Text('Save Sleep'),
-                       ),
-                     ],
-                   ),
-                 ),
-               );
+              showLogSleepSheet(context, onSave: (SleepEntry entry) {
+                store.addSleepLog(entry);
+              });
             },
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.bedtime, size: 32, color: Theme.of(context).colorScheme.secondary),
-                const SizedBox(height: 8),
-                Text('Add Sleep', style: Theme.of(context).textTheme.labelLarge),
-              ],
-            ),
           ),
         ),
       ],

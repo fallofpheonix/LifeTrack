@@ -11,13 +11,13 @@ class HydrationState {
   factory HydrationState.fromStore(LifeTrackStore store) {
     return HydrationState(
       current: store.snapshot.waterGlasses,
-      goal: 8, // Fixed goal for now, or fetch from profile if available
+      goal: store.snapshot.waterGoal,
     );
   }
 }
 
 final hydrationProvider = StateNotifierProvider<HydrationNotifier, HydrationState>((ref) {
-  final store = ref.watch(lifeTrackStoreProvider);
+  final store = ref.read(lifeTrackStoreProvider);
   return HydrationNotifier(store);
 });
 

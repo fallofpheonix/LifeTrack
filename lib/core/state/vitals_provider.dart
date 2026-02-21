@@ -33,7 +33,7 @@ class VitalsState {
 }
 
 final vitalsProvider = StateNotifierProvider<VitalsNotifier, VitalsState>((ref) {
-  final store = ref.watch(lifeTrackStoreProvider);
+  final store = ref.read(lifeTrackStoreProvider);
   return VitalsNotifier(store);
 });
 

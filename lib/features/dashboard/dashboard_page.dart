@@ -15,16 +15,16 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppPageLayout(
       child: ListView(
-        children: const [
-          TodaySummarySection(),
-          SizedBox(height: 16),
-          InsightsSection(),
-          SizedBox(height: 16),
-          HydrationCard(),
-          SizedBox(height: 16),
-          _QuoteSection(), // Add Quote Banner
-          SizedBox(height: 16),
-          QuickActionsSection(),
+        children: [
+          const TodaySummarySection(),
+          const SizedBox(height: 16),
+          const InsightsSection(),
+          const SizedBox(height: 16),
+          const HydrationCard(),
+          const SizedBox(height: 16),
+          const _QuoteSection(),
+          const SizedBox(height: 16),
+          const QuickActionsSection(),
         ],
       ),
     );

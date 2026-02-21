@@ -4,7 +4,7 @@ import 'package:lifetrack/core/state/store_provider.dart';
 import 'package:lifetrack/data/models/health_record_entry.dart';
 
 final recordsProvider = StateNotifierProvider<RecordsNotifier, List<HealthRecordEntry>>((ref) {
-  final store = ref.watch(lifeTrackStoreProvider);
+  final store = ref.read(lifeTrackStoreProvider);
   return RecordsNotifier(store);
 });
 

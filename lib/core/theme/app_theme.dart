@@ -1,34 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:lifetrack/core/theme/app_colors_extension.dart';
 
 class AppTheme {
-  // Clinical palette
-  static const Color appPrimary = Color(0xFF2F4858);
-  static const Color appAccent = Color(0xFF6FA3A9);
+  // Dark-violet glass palette
+  static const Color appPrimary = Color(0xFF191735);
+  static const Color appAccent = Color(0xFF9A7BFF);
+  static const Color appAccentSoft = Color(0xFF6A5CD8);
   static const Color appBackgroundLight = Color(0xFFF4F7F8);
-  static const Color appBackgroundDark = Color(0xFF1C2328);
+  static const Color appBackgroundDark = Color(0xFF141227);
 
   // Semantic surfaces
-  static const Color cardSurfaceLight = Color(0xFFFFFFFF);
-  static const Color cardSurfaceDark = Color(0xFF242D33);
+  static const Color cardSurfaceLight = Color(0xE6FFFFFF);
+  static const Color cardSurfaceDark = Color(0x22FFFFFF);
 
   static ThemeData get lightTheme {
     const ColorScheme scheme = ColorScheme.light(
       primary: appPrimary,
       secondary: appAccent,
-      tertiary: Color(0xFF5C8C91),
+      tertiary: appAccentSoft,
       surface: cardSurfaceLight,
-      onSurface: Color(0xFF1F2A33),
+      onSurface: Color(0xFF1D1C2F),
       onPrimary: Colors.white,
-      onSecondary: Color(0xFF102028),
-      primaryContainer: Color(0xFFDCE8EA),
-      secondaryContainer: Color(0xFFE5F0F1),
-      outlineVariant: Color(0xFFCCD7DC),
+      onSecondary: Color(0xFF17142B),
+      primaryContainer: Color(0xFFE5E0FF),
+      secondaryContainer: Color(0xFFEEEAFE),
+      outlineVariant: Color(0xFFD8D3EA),
       error: Color(0xFFB3261E),
     );
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      extensions: const <ThemeExtension<dynamic>>[AppColors.light],
       colorScheme: scheme,
       scaffoldBackgroundColor: appBackgroundLight,
       appBarTheme: const AppBarTheme(
@@ -38,10 +41,13 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: scheme.surface,
-        shadowColor: Colors.black.withValues(alpha: 0.05),
-        elevation: 1.4,
+        shadowColor: appPrimary.withValues(alpha: 0.10),
+        elevation: 0,
         margin: const EdgeInsets.only(bottom: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.55)),
+        ),
       ),
       textTheme: const TextTheme(
         headlineSmall: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.3),
@@ -69,21 +75,22 @@ class AppTheme {
   static ThemeData get darkTheme {
     const ColorScheme scheme = ColorScheme.dark(
       primary: appAccent,
-      secondary: Color(0xFF7EB0B4),
-      tertiary: Color(0xFF8FC3C8),
+      secondary: appAccentSoft,
+      tertiary: Color(0xFFC6B7FF),
       surface: cardSurfaceDark,
-      onSurface: Color(0xFFD5E0E4),
-      onPrimary: Color(0xFF0E1A21),
-      onSecondary: Color(0xFF102028),
-      primaryContainer: Color(0xFF31444D),
-      secondaryContainer: Color(0xFF2A3B43),
-      outlineVariant: Color(0xFF3B4A52),
+      onSurface: Color(0xFFEAE8FF),
+      onPrimary: Color(0xFF17142B),
+      onSecondary: Color(0xFFEAE8FF),
+      primaryContainer: Color(0xFF2A2459),
+      secondaryContainer: Color(0xFF1F1C3F),
+      outlineVariant: Color(0x664B4378),
       error: Color(0xFFF2B8B5),
     );
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      extensions: const <ThemeExtension<dynamic>>[AppColors.dark],
       colorScheme: scheme,
       scaffoldBackgroundColor: appBackgroundDark,
       appBarTheme: const AppBarTheme(
@@ -96,8 +103,8 @@ class AppTheme {
         elevation: 0,
         margin: const EdgeInsets.only(bottom: 12),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.42)),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: scheme.outlineVariant),
         ),
       ),
       textTheme: const TextTheme(

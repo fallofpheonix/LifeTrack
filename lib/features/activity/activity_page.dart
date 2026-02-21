@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lifetrack/core/state/store_provider.dart';
+import 'package:lifetrack/core/theme/app_colors_extension.dart';
 import 'package:lifetrack/core/ui/base_card.dart';
 import 'package:lifetrack/core/ui/empty_state.dart';
 import 'package:lifetrack/data/models/activity_log.dart';
 import 'package:lifetrack/data/models/activity_type.dart';
 import 'package:lifetrack/core/utils/animated_fade_slide.dart';
 import 'package:lifetrack/core/ui/app_page_layout.dart';
+import 'package:lifetrack/features/activity/widgets/add_activity_dialog.dart';
+import 'package:lifetrack/design_system/tokens/app_spacing.dart';
 
 class ActivityPage extends ConsumerWidget {
   const ActivityPage({super.key});
@@ -25,17 +28,14 @@ class ActivityPage extends ConsumerWidget {
             Text('Movement', style: Theme.of(context).textTheme.titleLarge),
             FilledButton.icon(
               onPressed: () async {
-                  final result = await showDialog(
-                    context: context,
-                    builder: (context) => const AddActivityDialog(),
-                  );
-                  if (result != null && result is Map) {
+                  final result = await showAddActivityDialog(context);
+                  if (result != null) {
                      final ActivityLog log = ActivityLog(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        type: result['type'] as ActivityType, 
+                        type: result['type'] as ActivityType,
                         name: (result['type'] as ActivityType).displayName,
-                        durationMinutes: result['duration'],
-                        caloriesBurned: result['calories'],
+                        durationMinutes: result['duration'] as int,
+                        caloriesBurned: result['calories'] as int,
                         date: DateTime.now(),
                      );
                      store.addActivity(log);
@@ -46,7 +46,7 @@ class ActivityPage extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         if (activities.isEmpty)
            const Padding(
              padding: EdgeInsets.only(top: 40),
@@ -56,10 +56,9 @@ class ActivityPage extends ConsumerWidget {
           ...activities.asMap().entries.map((MapEntry<int, ActivityLog> entry) {
             final int index = entry.key;
             final ActivityLog activity = entry.value;
-            // Helper to get icon from type name
+            final c = context.appColors;
             IconData icon = Icons.fitness_center;
             try {
-               // Use the type directly from the model
                final type = activity.activityType;
                icon = type.icon;
             } catch (e) {
@@ -72,10 +71,10 @@ class ActivityPage extends ConsumerWidget {
                 child: Row(
                   children: <Widget>[
                     CircleAvatar(
-                      backgroundColor: Colors.orange.withValues(alpha: 0.1),
-                      child: Icon(icon, color: Colors.orange),
+                      backgroundColor: c.accentActivity.withValues(alpha: 0.15),
+                      child: Icon(icon, color: c.accentActivity),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,30 +83,29 @@ class ActivityPage extends ConsumerWidget {
                           const SizedBox(height: 2),
                           Row(
                             children: <Widget>[
-                               Icon(icon, size: 14, color: Colors.grey),
-                               const SizedBox(width: 4),
+                               Icon(icon, size: 14, color: c.textSecondary),
+                               const SizedBox(width: AppSpacing.xs),
                                Text('${activity.durationMinutes} min'),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEEE0),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
+                    Chip(
+                      label: Text(
                         '-${activity.caloriesBurned} kcal',
-                        style: const TextStyle(
-                          color: Color(0xFFB45A11),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSecondary,
                           fontWeight: FontWeight.w700,
+                          fontSize: 12,
                         ),
                       ),
+                      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                      icon: Icon(Icons.delete_outline, size: 20, color: c.textSecondary),
                       onPressed: () => store.deleteActivity(activity.id),
                     ),
                   ],
@@ -121,72 +119,3 @@ class ActivityPage extends ConsumerWidget {
   }
 }
 
-class AddActivityDialog extends StatefulWidget {
-  const AddActivityDialog({super.key});
-
-  @override
-  State<AddActivityDialog> createState() => _AddActivityDialogState();
-}
-
-class _AddActivityDialogState extends State<AddActivityDialog> {
-  ActivityType _selectedType = ActivityType.run;
-  final TextEditingController _durationController = TextEditingController(text: '30');
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Log Activity'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          DropdownButtonFormField<ActivityType>(
-            initialValue: _selectedType,
-            decoration: const InputDecoration(labelText: 'Activity Type'),
-            items: ActivityType.values.map((ActivityType type) {
-              return DropdownMenuItem<ActivityType>(
-                value: type,
-                child: Row(
-                  children: <Widget>[
-                    Icon(type.icon, size: 16),
-                    const SizedBox(width: 8),
-                    Text(type.displayName),
-                  ],
-                ),
-              );
-            }).toList(),
-            onChanged: (ActivityType? value) {
-              if (value != null) {
-                setState(() {
-                  _selectedType = value;
-                });
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _durationController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Duration (minutes)'),
-          ),
-        ],
-      ),
-      actions: <Widget>[
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(
-          onPressed: () {
-            final int duration = int.tryParse(_durationController.text) ?? 0;
-            if (duration > 0) {
-              final int calories = duration * _selectedType.caloriesPerMinute;
-              Navigator.pop(context, <String, dynamic>{
-                'type': _selectedType,
-                'duration': duration,
-                'calories': calories,
-              });
-            }
-          },
-          child: const Text('Save'),
-        ),
-      ],
-    );
-  }
-}

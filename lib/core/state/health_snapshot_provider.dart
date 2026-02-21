@@ -7,7 +7,7 @@ import 'package:lifetrack/core/state/store_provider.dart';
 /// Rebuilds consumers only when the snapshot changes.
 final healthSnapshotProvider =
     StateNotifierProvider<HealthSnapshotNotifier, HealthSnapshot>((ref) {
-  final store = ref.watch(lifeTrackStoreProvider);
+  final store = ref.read(lifeTrackStoreProvider);
   return HealthSnapshotNotifier(store);
 });
 

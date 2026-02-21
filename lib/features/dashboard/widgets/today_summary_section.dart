@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lifetrack/core/state/health_snapshot_provider.dart';
-import 'package:lifetrack/core/ui/base_card.dart';
+import 'package:lifetrack/core/theme/app_colors_extension.dart';
+import 'package:lifetrack/design_system/components/metric_card.dart';
+import 'package:lifetrack/design_system/components/metric_item.dart';
+import 'package:lifetrack/design_system/tokens/app_spacing.dart';
 
 class TodaySummarySection extends ConsumerWidget {
   const TodaySummarySection({super.key});
@@ -9,9 +12,10 @@ class TodaySummarySection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(healthSnapshotProvider);
+    final c = context.appColors;
 
-    return BaseCard(
-      padding: const EdgeInsets.all(20),
+    return MetricCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -19,66 +23,38 @@ class TodaySummarySection extends ConsumerWidget {
             'Today',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _MetricItem(
+              MetricItem(
                 label: 'Steps',
                 value: snapshot.steps.toString(),
                 icon: Icons.directions_walk,
-                color: Colors.orange,
+                color: c.accentActivity,
               ),
-              _MetricItem(
+              MetricItem(
                 label: 'Sleep',
-                value: '${snapshot.sleepHours}h',
+                value: '${snapshot.sleepHours.toStringAsFixed(1)}h',
                 icon: Icons.bedtime,
-                color: Colors.purple,
+                color: c.accentRecovery,
               ),
-              _MetricItem(
-                label: 'Calories',
+              MetricItem(
+                label: 'Burned',
                 value: snapshot.caloriesBurned.toString(),
                 icon: Icons.local_fire_department,
-                color: Colors.red,
+                color: c.accentActivity,
+              ),
+              MetricItem(
+                label: 'Consumed',
+                value: snapshot.caloriesConsumed.toString(),
+                icon: Icons.restaurant,
+                color: c.accentRecovery,
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MetricItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _MetricItem({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
     );
   }
 }

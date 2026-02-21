@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lifetrack/core/state/hydration_provider.dart';
+import 'package:lifetrack/core/theme/app_colors_extension.dart';
 import 'package:lifetrack/core/ui/base_card.dart';
+import 'package:lifetrack/design_system/tokens/app_spacing.dart';
 
 class HydrationCard extends ConsumerWidget {
   const HydrationCard({super.key});
@@ -10,19 +12,13 @@ class HydrationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hydration = ref.watch(hydrationProvider);
     final notifier = ref.read(hydrationProvider.notifier);
+    final c = context.appColors;
 
     return BaseCard(
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.water_drop, color: Colors.blue),
-          ),
-          const SizedBox(width: 16),
+          Icon(Icons.water_drop, color: c.accentRecovery, size: 32),
+          const SizedBox(width: AppSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,15 +37,15 @@ class HydrationCard extends ConsumerWidget {
           IconButton.filledTonal(
             onPressed: notifier.removeGlass,
             icon: const Icon(Icons.remove),
-            padding: const EdgeInsets.all(4), 
-             constraints: const BoxConstraints(),
+            padding: const EdgeInsets.all(AppSpacing.xs),
+            constraints: const BoxConstraints(),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           IconButton.filled(
             onPressed: notifier.addGlass,
             icon: const Icon(Icons.add),
-             padding: const EdgeInsets.all(4),
-              constraints: const BoxConstraints(),
+            padding: const EdgeInsets.all(AppSpacing.xs),
+            constraints: const BoxConstraints(),
           ),
         ],
       ),

@@ -2,8 +2,11 @@ import 'package:lifetrack/core/ui/app_page_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lifetrack/core/theme/app_colors_extension.dart';
 import 'package:lifetrack/core/ui/base_card.dart';
 import 'package:lifetrack/core/ui/empty_state.dart';
+import 'package:lifetrack/design_system/layout/screen_scaffold.dart';
+import 'package:lifetrack/design_system/tokens/app_spacing.dart';
 import 'package:lifetrack/data/models/vitals/blood_pressure_entry.dart';
 import 'package:lifetrack/data/models/vitals/heart_rate_entry.dart';
 import 'package:lifetrack/data/models/vitals/glucose_entry.dart';
@@ -174,12 +177,8 @@ class _VitalsPageState extends ConsumerState<VitalsPage> {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-                    child: Icon(icon, color: color),
-                  ),
-                  const SizedBox(width: 12),
+                  Icon(icon, color: color, size: 28),
+                  const SizedBox(width: AppSpacing.md),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -192,7 +191,7 @@ class _VitalsPageState extends ConsumerState<VitalsPage> {
               IconButton(onPressed: onAdd, icon: const Icon(Icons.add_circle_outline)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -200,15 +199,15 @@ class _VitalsPageState extends ConsumerState<VitalsPage> {
               Text(value, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: color)),
               if (history.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: Text('Latest', style: Theme.of(context).textTheme.bodySmall),
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           if (history.isNotEmpty)
             SizedBox(
-              height: 120, // Chart Height
+              height: 120,
               width: double.infinity,
               child: CustomPaint(
                 painter: VitalsChartPainter(
@@ -244,7 +243,7 @@ class _VitalsPageState extends ConsumerState<VitalsPage> {
         ? '${glucoseHistory.first.levelMgDl}'
         : '--';
 
-    return Scaffold(
+    return ScreenScaffold(
       appBar: AppBar(title: const Text('Vitals Dashboard')),
       body: AppPageLayout(
         child: ListView(
@@ -254,7 +253,7 @@ class _VitalsPageState extends ConsumerState<VitalsPage> {
             value: '$lastBP mmHg',
             subtitle: 'Systolic/Diastolic',
             icon: Icons.favorite_border,
-            color: Colors.red,
+            color: Theme.of(context).colorScheme.error,
             onAdd: _showAddBPDialog,
             history: bpHistory,
             type: VitalsChartType.bloodPressure,
@@ -264,7 +263,7 @@ class _VitalsPageState extends ConsumerState<VitalsPage> {
             value: '$lastHR bpm',
             subtitle: 'Beats per minute',
             icon: Icons.monitor_heart,
-            color: Colors.pink,
+            color: Theme.of(context).colorScheme.primary,
             onAdd: _showAddHRDialog,
             history: hrHistory,
             type: VitalsChartType.heartRate,
@@ -274,26 +273,33 @@ class _VitalsPageState extends ConsumerState<VitalsPage> {
             value: '$lastGlucose mg/dL',
             subtitle: 'Blood Sugar Level',
             icon: Icons.water_drop,
-            color: Colors.blue,
+            color: context.appColors.accentRecovery,
             onAdd: _showAddGlucoseDialog,
             history: glucoseHistory,
             type: VitalsChartType.glucose,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           if (bpHistory.isNotEmpty) ...[
              Text('Recent BP Log', style: Theme.of(context).textTheme.titleMedium),
-             const SizedBox(height: 8),
-             ...bpHistory.take(3).map((BloodPressureEntry e) => Card(
-               margin: const EdgeInsets.only(bottom: 8),
-               child: ListTile(
-                 leading: const Icon(Icons.favorite, color: Colors.red, size: 20),
-                 title: Text('${e.systolic}/${e.diastolic} mmHg'),
-                 subtitle: Text(DateFormat('MMM d, h:mm a').format(e.date)),
-                 trailing: e.isHypertensive
-                     ? const Chip(label: Text('High', style: TextStyle(color: Colors.white, fontSize: 10)), backgroundColor: Colors.red)
-                     : null,
-               ),
-             )),
+             const SizedBox(height: AppSpacing.sm),
+             ...bpHistory.take(3).map((BloodPressureEntry e) {
+               final scheme = Theme.of(context).colorScheme;
+               return Card(
+                 margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                 child: ListTile(
+                   leading: Icon(Icons.favorite, color: scheme.error, size: 20),
+                   title: Text('${e.systolic}/${e.diastolic} mmHg'),
+                   subtitle: Text(DateFormat('MMM d, h:mm a').format(e.date)),
+                   trailing: e.isHypertensive
+                       ? Chip(
+                           label: Text('High', style: TextStyle(color: scheme.onError, fontSize: 10)),
+                           backgroundColor: scheme.error,
+                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                         )
+                       : null,
+                 ),
+               );
+             }),
           ]
         ],
       ),

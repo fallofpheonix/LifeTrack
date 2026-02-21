@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lifetrack/design_system/layout/content_padding.dart';
 
 class AppPageLayout extends StatelessWidget {
   final Widget child;
@@ -15,10 +16,7 @@ class AppPageLayout extends StatelessWidget {
     return SafeArea(
       top: true,
       bottom: false, // Bottom nav usually handles this, or we handle it in nav bar
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: child,
-      ),
+      child: ContentPadding(child: child),
     );
   }
 }

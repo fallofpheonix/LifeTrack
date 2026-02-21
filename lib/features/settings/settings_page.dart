@@ -10,6 +10,9 @@ import 'package:lifetrack/core/services/health_log.dart';
 import 'package:lifetrack/core/services/governance/export_policy.dart';
 import 'package:lifetrack/core/services/governance/anonymization_policy.dart';
 import 'package:lifetrack/core/settings/ui_preferences.dart';
+import 'package:lifetrack/core/theme/app_colors_extension.dart';
+import 'package:lifetrack/design_system/layout/screen_scaffold.dart';
+import 'package:lifetrack/design_system/tokens/app_spacing.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -27,7 +30,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final LifeTrackStore store = ref.watch(lifeTrackStoreProvider);
     final ThemeMode currentTheme = store.themeMode;
 
-    return Scaffold(
+    return ScreenScaffold(
       appBar: AppBar(
         title: const Text('Settings'),
       ),
@@ -76,11 +79,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           const Divider(),
           _buildSectionHeader('Sync & Backup'),
-          const ListTile(
-            leading: Icon(Icons.cloud_sync),
-            title: Text('Sync Status'),
-            subtitle: Text('Offline (Sync coming in Phase 6)'),
-            trailing: Icon(Icons.cloud_off, color: Colors.grey),
+          ListTile(
+            leading: const Icon(Icons.cloud_sync),
+            title: const Text('Sync Status'),
+            subtitle: const Text('Offline (Sync coming in Phase 6)'),
+            trailing: Icon(Icons.cloud_off, color: context.appColors.textSecondary),
           ),
           const Divider(),
           _buildSectionHeader('Data Governance'),
@@ -100,8 +103,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             trailing: _isExporting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : null,
           ),
           ListTile(
-            leading: const Icon(Icons.delete_forever, color: Colors.red),
-            title: const Text('Clear All Data', style: TextStyle(color: Colors.red)),
+            leading: Icon(Icons.delete_forever, color: Theme.of(context).colorScheme.error),
+            title: Text('Clear All Data', style: TextStyle(color: Theme.of(context).colorScheme.error)),
             onTap: () => _confirmClearData(store),
           ),
           const Divider(),
@@ -118,11 +121,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
       child: Text(
         title,
         style: TextStyle(
-          color: Theme.of(context).primaryColor,
+          color: Theme.of(context).colorScheme.primary,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -192,9 +195,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true), 
-            child: const Text('Delete Everything')
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete Everything'),
           ),
         ],
       ),

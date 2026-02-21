@@ -5,6 +5,7 @@ import 'package:lifetrack/data/models/intelligence/insight.dart';
 import 'package:lifetrack/core/ui/base_card.dart';
 import 'package:lifetrack/core/ui/section_header.dart';
 import 'package:lifetrack/core/ui/empty_state.dart';
+import 'package:lifetrack/design_system/tokens/app_spacing.dart';
 
 class InsightsSection extends ConsumerWidget {
   const InsightsSection({super.key});
@@ -36,22 +37,22 @@ class InsightsSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Insights'),
-        ...insights.map((insight) => _InsightCard(insight: insight)),
+        ...insights.map((insight) => _InsightCard(insight: insight, onActionTap: null)),
       ],
     );
   }
 }
 
 class _InsightCard extends StatelessWidget {
-  final Insight insight;
+  const _InsightCard({required this.insight, this.onActionTap});
 
-  const _InsightCard({required this.insight});
+  final Insight insight;
+  final VoidCallback? onActionTap;
 
   @override
   Widget build(BuildContext context) {
-    // Determine color based on type/severity if available
-    // Assuming Insight has a type property
-    final Color color = insight.type == InsightType.alert ? Colors.red : Colors.blue;
+    final scheme = Theme.of(context).colorScheme;
+    final Color color = insight.type == InsightType.alert ? scheme.error : scheme.primary;
     final IconData icon = insight.type == InsightType.alert ? Icons.warning : Icons.info;
 
     return BaseCard(
@@ -59,7 +60,7 @@ class _InsightCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color),
-          const SizedBox(width: 16),
+          const SizedBox(width: AppSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,23 +71,21 @@ class _InsightCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(insight.message),
-                 if (insight.actionLabel != null) ...[
-                   const SizedBox(height: 8),
-                   GestureDetector(
-                     onTap: () {
-                       // TODO: Handle action
-                     },
-                     child: Text(
-                       insight.actionLabel!,
-                       style: TextStyle(
-                         color: Theme.of(context).colorScheme.primary,
-                         fontWeight: FontWeight.bold,
-                       ),
-                     ),
-                   ),
-                 ],
+                if (insight.actionLabel != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  GestureDetector(
+                    onTap: onActionTap,
+                    child: Text(
+                      insight.actionLabel!,
+                      style: TextStyle(
+                        color: scheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

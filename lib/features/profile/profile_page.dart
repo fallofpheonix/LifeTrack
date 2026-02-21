@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui' as ui;
-import 'package:lifetrack/core/ui/base_card.dart'; // Added import
+import 'package:lifetrack/app/router/app_router.dart';
+import 'package:lifetrack/core/theme/app_colors_extension.dart';
+import 'package:lifetrack/core/ui/base_card.dart';
 import 'package:lifetrack/data/models/user_profile.dart';
 import 'package:lifetrack/features/profile/widgets/medical_details_section.dart';
 import 'package:lifetrack/data/models/weight_entry.dart';
 import 'package:lifetrack/core/state/store_provider.dart';
-import 'package:lifetrack/features/settings/settings_page.dart';
 import 'package:lifetrack/core/ui/app_page_layout.dart';
+import 'package:lifetrack/design_system/layout/screen_scaffold.dart';
+import 'package:lifetrack/design_system/tokens/app_spacing.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -112,11 +115,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     );
   }
 
-  Color _getBmiColor(double bmi) {
-    if (bmi < 18.5) return Colors.blue;
-    if (bmi < 25) return Colors.green;
-    if (bmi < 30) return Colors.orange;
-    return Colors.red;
+  Color _getBmiColor(BuildContext context, double bmi) {
+    final c = context.appColors;
+    if (bmi < 18.5) return c.accentFocus;
+    if (bmi < 25) return c.accentRecovery;
+    if (bmi < 30) return c.accentActivity;
+    return Theme.of(context).colorScheme.error;
   }
 
   String _getBmiLabel(double bmi) {
@@ -136,18 +140,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final double bodyFat = userProfile.bodyFatPercentage;
     final int bmr = userProfile.bmr;
 
-    return Scaffold(
+    return ScreenScaffold(
       appBar: AppBar(
         title: const Text('My Profile'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (BuildContext context) => const SettingsPage(),
-                ),
-              );
+              Navigator.pushNamed(context, AppRoutes.settings);
             },
           ),
         ],
@@ -159,10 +159,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             radius: 40,
             child: Icon(Icons.person, size: 40),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xl),
           BaseCard(
-            child: Padding( // BaseCard already has padding but custom child might want more or structure
-              padding: const EdgeInsets.all(0),
+            child: Padding(
+              padding: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -177,7 +177,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                        ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                   SizedBox(
                     height: 180,
                     width: double.infinity,
@@ -185,24 +185,31 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       painter: WeightChartPainter(
                         entries: weightHistory,
                         lineColor: Theme.of(context).colorScheme.primary,
+                        gridColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        labelColor: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Center(child: Text('Last 30 Days', style: TextStyle(color: Colors.grey, fontSize: 12))),
+                  const SizedBox(height: AppSpacing.sm),
+                  Center(
+                    child: Text(
+                      'Last 30 Days',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.appColors.textSecondary),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           BaseCard(
             child: Padding(
-              padding: const EdgeInsets.all(0),
+              padding: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text('Health Metrics', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
@@ -210,8 +217,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                            const Text('BMI'),
-                           Text(bmi.toStringAsFixed(1), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _getBmiColor(bmi))),
-                           Text(_getBmiLabel(bmi), style: TextStyle(color: _getBmiColor(bmi), fontWeight: FontWeight.w500)),
+                           Text(bmi.toStringAsFixed(1), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _getBmiColor(context, bmi))),
+                           Text(_getBmiLabel(bmi), style: TextStyle(color: _getBmiColor(context, bmi), fontWeight: FontWeight.w500)),
                         ],
                       ),
                       Column(
@@ -236,12 +243,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           TextField(
             controller: _nameController,
             decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_outline)),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Row(
             children: <Widget>[
               Expanded(
@@ -251,7 +258,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   decoration: const InputDecoration(labelText: 'Age', prefixIcon: Icon(Icons.cake_outlined)),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: TextField(
                   controller: _genderController,
@@ -260,7 +267,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Row(
             children: <Widget>[
               Expanded(
@@ -270,7 +277,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   decoration: const InputDecoration(labelText: 'Weight (kg)', prefixIcon: Icon(Icons.monitor_weight_outlined)),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: TextField(
                   controller: _heightController,
@@ -280,7 +287,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Row(
              children: <Widget>[
                Expanded(
@@ -289,7 +296,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                    decoration: const InputDecoration(labelText: 'Blood Type', prefixIcon: Icon(Icons.bloodtype_outlined)),
                  ),
                ),
-               const SizedBox(width: 12),
+               const SizedBox(width: AppSpacing.md),
                Expanded(
                  child: TextField(
                    controller: _goalController,
@@ -299,9 +306,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                ),
              ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           const MedicalDetailsSection(),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xl),
           FilledButton.icon(
             onPressed: _save,
             icon: const Icon(Icons.save),
@@ -315,10 +322,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 }
 
 class WeightChartPainter extends CustomPainter {
-  WeightChartPainter({required this.entries, required this.lineColor});
+  WeightChartPainter({
+    required this.entries,
+    required this.lineColor,
+    Color? gridColor,
+    Color? labelColor,
+  })  : gridColor = gridColor ?? const Color(0xFF9E9E9E),
+        labelColor = labelColor ?? const Color(0xFF000000);
 
   final List<WeightEntry> entries;
   final Color lineColor;
+  final Color gridColor;
+  final Color labelColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -335,7 +350,7 @@ class WeightChartPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final Paint gridPaint = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.2)
+      ..color = gridColor
       ..strokeWidth = 1.0;
 
     // Draw grid lines
@@ -392,7 +407,7 @@ class WeightChartPainter extends CustomPainter {
         // Draw label for first and last
         if (i == 0 || i == entries.length - 1) {
              final TextSpan span = TextSpan(
-                 style: const TextStyle(color: Colors.black, fontSize: 10),
+                 style: TextStyle(color: labelColor, fontSize: 10),
                  text: '${entries[i].weightKg}kg',
              );
              final TextPainter tp = TextPainter(
@@ -409,6 +424,9 @@ class WeightChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant WeightChartPainter oldDelegate) {
-    return oldDelegate.entries != entries;
+    return oldDelegate.entries != entries ||
+        oldDelegate.lineColor != lineColor ||
+        oldDelegate.gridColor != gridColor ||
+        oldDelegate.labelColor != labelColor;
   }
 }

@@ -10,7 +10,7 @@ import 'package:lifetrack/core/state/store_provider.dart';
 import 'package:lifetrack/core/storage/schema_service.dart';
 import 'package:lifetrack/core/settings/ui_preferences.dart';
 import 'package:lifetrack/core/ui/background/animated_health_background.dart';
-import 'package:lifetrack/app/app_shell.dart';
+import 'package:lifetrack/app/router/app_router.dart';
 import 'package:lifetrack/data/repositories/local_vitals_repository.dart';
 import 'package:lifetrack/data/repositories/local_medication_repository.dart';
 import 'package:lifetrack/data/repositories/mock_auth_repository.dart';
@@ -131,7 +131,8 @@ class LifeTrackApp extends ConsumerWidget {
                scaffoldBackgroundColor: Colors.transparent, // Crucial for background visibility
             ),
             themeMode: themeMode,
-            home: const AppShell(),
+            routes: AppRouter.routes,
+            initialRoute: AppRoutes.root,
             debugShowCheckedModeBanner: false,
           ),
         ],

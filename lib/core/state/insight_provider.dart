@@ -5,7 +5,7 @@ import 'package:lifetrack/core/state/store_provider.dart';
 
 final insightProvider =
     StateNotifierProvider<InsightNotifier, List<Insight>>((ref) {
-  final store = ref.watch(lifeTrackStoreProvider);
+  final store = ref.read(lifeTrackStoreProvider);
   return InsightNotifier(store);
 });
 
