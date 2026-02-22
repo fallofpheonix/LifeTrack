@@ -30,9 +30,4 @@ class FeedbackService {
     // HapticFeedback.lightImpact(); // Requires import
   }
 
-  static Future<void> submitUserReport(String text) async {
-    HealthLog.audit('FeedbackService', 'Submit', 'User Feedback Submitted', userId: 'current_user', details: {'text': text});
-    // TODO: Send to backend
-    await Future.delayed(const Duration(seconds: 1));
-  }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lifetrack/core/services/life_track_store.dart';
-import 'package:lifetrack/data/models/disease_info.dart';
+import 'package:lifetrack/domain/education/models/disease.dart';
 import 'package:lifetrack/data/models/health_record_entry.dart';
-import 'package:lifetrack/data/models/scientist.dart';
+import 'package:lifetrack/domain/education/models/scientist.dart' as edu;
 
 class GlobalSearchDelegate extends SearchDelegate {
   final LifeTrackStore store;
@@ -54,8 +54,8 @@ class GlobalSearchDelegate extends SearchDelegate {
     final String q = query.toLowerCase();
 
     // Filter using Store methods
-    final List<DiseaseInfo> diseases = store.searchDiseases(q);
-    final List<Scientist> scientists = store.searchScientists(q);
+    final List<Disease> diseases = store.searchDiseases(q);
+    final List<edu.Scientist> scientists = store.searchScientists(q);
     final List<HealthRecordEntry> records = store.searchRecords(q);
 
     if (diseases.isEmpty && scientists.isEmpty && records.isEmpty) {
@@ -78,7 +78,7 @@ class GlobalSearchDelegate extends SearchDelegate {
           ...diseases.map((d) => ListTile(
             leading: const Icon(Icons.medical_services),
             title: Text(d.name),
-            subtitle: Text(d.symptoms, maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text(d.desc, maxLines: 1, overflow: TextOverflow.ellipsis),
             onTap: () {
               // TODO: Navigate to detail
               close(context, null);
@@ -89,9 +89,9 @@ class GlobalSearchDelegate extends SearchDelegate {
         if (scientists.isNotEmpty) ...[
           _buildHeader(context, 'Scientists'),
           ...scientists.map((s) => ListTile(
-            leading: CircleAvatar(backgroundImage: NetworkImage(s.imageUrl)),
+            leading: const Icon(Icons.person), // Use icon instead of network image for offline
             title: Text(s.name),
-            subtitle: Text(s.contribution),
+            subtitle: Text(s.domain),
             onTap: () => close(context, null),
           )),
         ],

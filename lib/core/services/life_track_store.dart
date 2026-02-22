@@ -27,10 +27,13 @@ import 'package:lifetrack/data/models/clinical/recovery_data_point.dart';
 import 'package:lifetrack/data/models/content/news_item.dart'; 
 import 'package:lifetrack/core/data/repository/vitals_repository.dart';
 import 'package:lifetrack/core/data/repository/medication_repository.dart';
-import 'package:lifetrack/core/services/secure_serializer.dart';
-import 'package:lifetrack/core/services/user_session_service.dart';
-import 'package:lifetrack/core/services/sync_queue_service.dart';
-import 'package:lifetrack/core/services/sync_service.dart';
+import 'package:lifetrack/core/data/repository/activity_repository.dart';
+import 'package:lifetrack/core/data/repository/meal_repository.dart';
+import 'package:lifetrack/core/data/repository/sleep_repository.dart';
+import 'package:lifetrack/core/data/repository/record_repository.dart';
+import 'package:lifetrack/domain/education/repositories/education_repository.dart';
+import 'package:lifetrack/domain/education/models/disease.dart';
+import 'package:lifetrack/domain/education/models/scientist.dart' as edu;
 import 'package:lifetrack/core/services/health_log.dart';
 import 'package:lifetrack/core/settings/ui_preferences.dart';
 import 'package:lifetrack/core/services/background_service.dart';
@@ -39,7 +42,6 @@ import 'package:lifetrack/core/services/intelligence/plateau_service.dart';
 import 'package:lifetrack/core/services/intelligence/suggestion_service.dart';
 
 import 'package:lifetrack/core/services/data_governance_service.dart';
-import 'package:lifetrack/core/services/governance/export_policy.dart'; 
 import 'package:lifetrack/core/utils/date_utils.dart'; 
 
 // Const keys
@@ -55,10 +57,11 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   // Dependencies
   final VitalsRepository vitalsRepo;
   final MedicationRepository medicationRepo;
-  final UserSessionService sessionService;
-  final SecureSerializer secureSerializer;
-  final SyncQueueService syncQueue;
-  final SyncService syncService;
+  final ActivityRepository activityRepo;
+  final MealRepository mealRepo;
+  final SleepRepository sleepRepo;
+  final RecordRepository recordRepo;
+  final EducationRepository educationRepo;
   final DataGovernanceService governanceService;
   final ConsistencyService consistencyService; 
   final PlateauService plateauService; 
@@ -90,6 +93,12 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   List<HealthRecordEntry> get records => _allRecords.where((e) => e.deletedAt == null).toList();
   List<Insight> get insights => _generatedInsights;
 
+  List<Disease> _diseaseLibrary = [];
+  List<edu.Scientist> _scientistLibrary = [];
+  
+  List<Disease> get diseaseLibrary => _diseaseLibrary;
+  List<edu.Scientist> get scientistLibrary => _scientistLibrary;
+
   List<ReminderItem> reminders = [];
   
   // Vitals Cache (Managed by Repo, but exposed here for UI convenience/legacy)
@@ -101,29 +110,18 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   // Meds Cache
   List<DoseLog> doseLogs = [];
 
-  // Pedometer
-  StreamSubscription<StepCount>? _stepCountStream;
+  // Legacy hardcoded lists removed
 
-  // Static Data (Mock for now, could move to Repo)
-  final List<DiseaseInfo> diseaseGuide = [
-      DiseaseInfo(name: 'Hypertension', symptoms: 'High Blood Pressure, Headaches', precautions: 'Reduce salt, Exercise', prevention: 'Maintain healthy weight', cure: 'Medication, Lifestyle changes'),
-      DiseaseInfo(name: 'Diabetes T2', symptoms: 'Thirst, Frequent urination', precautions: 'Low sugar diet', prevention: 'Weight loss, Exercise', cure: 'Insulin, Metformin'),
-      DiseaseInfo(name: 'Influenza', symptoms: 'Fever, Cough, Fatigue', precautions: 'Hygiene, Mask', prevention: 'Vaccine', cure: 'Rest, Fluids, Antivirals'),
-  ];
-
-  final List<Scientist> scientists = [
-      Scientist(name: 'Louis Pasteur', contribution: 'Germ Theory, Vaccination', description: 'French microbiologist composed of germ theory.', imageUrl: 'https://example.com/pasteur.jpg'),
-      Scientist(name: 'Alexander Fleming', contribution: 'Penicillin', description: 'Scottish physician who discovered penicillin.', imageUrl: 'https://example.com/fleming.jpg'),
-      Scientist(name: 'Marie Curie', contribution: 'Radioactivity', description: 'Polish-French physicist and chemist.', imageUrl: 'https://example.com/curie.jpg'),
-  ];
+  // Legacy hardcoded lists removed
 
   LifeTrackStore({
     required this.vitalsRepo,
     required this.medicationRepo,
-    required this.sessionService,
-    required this.secureSerializer,
-    required this.syncQueue,
-    required this.syncService,
+    required this.activityRepo,
+    required this.mealRepo,
+    required this.sleepRepo,
+    required this.recordRepo,
+    required this.educationRepo,
     required this.governanceService,
     required this.consistencyService,
     required this.plateauService,
@@ -231,47 +229,38 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   static Future<LifeTrackStore> load(
     VitalsRepository vitalsRepo,
     MedicationRepository medicationRepo,
-    UserSessionService sessionService,
-    SecureSerializer secureSerializer,
-    SyncQueueService syncQueue,
-    SyncService syncService,
+    ActivityRepository activityRepo,
+    MealRepository mealRepo,
+    SleepRepository sleepRepo,
+    RecordRepository recordRepo,
+    EducationRepository educationRepo,
     DataGovernanceService governanceService,
   ) async {
      try {
        final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-       // Helper to load encrypted
-       Future<String?> loadStr(String key) async {
-           final enc = prefs.getString(key);
-           if (enc == null) return null;
-           return await secureSerializer.decryptString(enc);
-       }
+       final snapStr = prefs.getString(_snapshotKey);
+       final profileStr = prefs.getString(_profileKey);
 
-       final snapStr = await loadStr(_snapshotKey);
-       final profileStr = await loadStr(_profileKey);
-       final remindersStr = await loadStr(_remindersKey);
-       final recordsStr = await loadStr(_recordsKey);
-       final mealsStr = await loadStr(_mealsKey);
-       final activitiesStr = await loadStr(_activitiesKey);
-       final sleepStr = await loadStr(_sleepKey);
-
-       // Decode in background (simulated or real)
        final snapshot = await BackgroundService.decodeSnapshot(snapStr) ?? HealthSnapshot.empty();
        final profile = await BackgroundService.decodeProfile(profileStr) ?? UserProfile.empty();
        
-       final reminders = await BackgroundService.decodeReminders(remindersStr);
-       final records = await BackgroundService.decodeRecords(recordsStr);
-       final meals = await BackgroundService.decodeMeals(mealsStr);
-       final activities = await BackgroundService.decodeActivities(activitiesStr);
-       final sleep = await BackgroundService.decodeSleep(sleepStr);
+       final activities = await activityRepo.getActivities();
+       final meals = await mealRepo.getMeals();
+       final sleep = await sleepRepo.getSleepLogs();
+       final records = await recordRepo.getRecords();
+       
+       final diseases = await educationRepo.loadDiseases();
+       final scientists = await educationRepo.loadScientists();
 
        final store = LifeTrackStore(
         vitalsRepo: vitalsRepo,
         medicationRepo: medicationRepo,
-        sessionService: sessionService,
-        secureSerializer: secureSerializer,
-        syncQueue: syncQueue,
-        syncService: syncService,
+        activityRepo: activityRepo,
+        mealRepo: mealRepo,
+        sleepRepo: sleepRepo,
+        recordRepo: recordRepo,
+        educationRepo: educationRepo,
         governanceService: governanceService,
         consistencyService: ConsistencyService(), 
         plateauService: PlateauService(), 
@@ -280,11 +269,13 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
         userProfile: profile,
        );
 
-       store.reminders = reminders;
        store._allRecords = records;
        store._allMeals = meals;
        store._allActivities = activities;
        store._allSleepLogs = sleep;
+       
+       store._diseaseLibrary = diseases;
+       store._scientistLibrary = scientists;
        
        return store;
 
@@ -302,8 +293,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     _allRecords.insert(0, record);
     _refreshInsights();
     notifyListeners();
-    await _persistRecords();
-    await _enqueueSync(SyncOperationType.create, 'medical_record', record.id, record.toJson());
+    await recordRepo.saveRecord(record);
     HealthLog.audit('LifeTrackStore', 'AddRecord', 'Medical Record Added', userId: 'user', details: {'id': record.id});
   }
 
@@ -313,8 +303,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     _recalculateDailyTotals();
     _refreshInsights();
     notifyListeners();
-    await _persistActivities();
-    await _enqueueSync(SyncOperationType.create, 'activity', log.id, log.toJson());
+    await activityRepo.saveActivity(log);
   }
 
   Future<void> deleteActivity(String id) async {
@@ -331,8 +320,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
        _recalculateDailyTotals();
        _refreshInsights();
        notifyListeners();
-       await _persistActivities();
-       await _enqueueSync(SyncOperationType.delete, 'activity', id, {});
+       await activityRepo.deleteActivity(id);
     }
   }
 
@@ -341,8 +329,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     _allMeals.insert(0, entry);
     _recalculateDailyTotals();
     notifyListeners();
-    await _persistMeals();
-    await _enqueueSync(SyncOperationType.create, 'meal', entry.id, entry.toJson());
+    await mealRepo.saveMeal(entry);
   }
 
   Future<void> deleteMeal(String id) async {
@@ -363,8 +350,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
        _allMeals[index] = updated;
        _recalculateDailyTotals();
        notifyListeners();
-       await _persistMeals();
-       await _enqueueSync(SyncOperationType.delete, 'meal', id, {});
+       await mealRepo.deleteMeal(id);
      }
   }
 
@@ -373,7 +359,6 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     _refreshInsights();
     notifyListeners();
     await _persistSnapshot();
-    await _enqueueSync(SyncOperationType.update, 'snapshot', 'daily_snapshot', snapshot.toJson());
   }
 
   Future<void> removeWaterGlass() async {
@@ -382,7 +367,6 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
       _refreshInsights();
       notifyListeners();
       await _persistSnapshot();
-      await _enqueueSync(SyncOperationType.update, 'snapshot', 'daily_snapshot', snapshot.toJson());
     }
   }
 
@@ -390,25 +374,21 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> addWeightEntry(WeightEntry entry) async {
     await vitalsRepo.saveWeight(entry);
     await _refreshVitalsCache();
-     await _enqueueSync(SyncOperationType.create, 'weight', entry.date.toIso8601String(), entry.toJson());
   }
 
   Future<void> addBloodPressure(BloodPressureEntry entry) async {
     await vitalsRepo.saveBP(entry);
     await _refreshVitalsCache();
-    await _enqueueSync(SyncOperationType.create, 'blood_pressure', entry.id, entry.toJson());
   }
 
   Future<void> addHeartRate(HeartRateEntry entry) async {
     await vitalsRepo.saveHeartRate(entry);
     await _refreshVitalsCache();
-    await _enqueueSync(SyncOperationType.create, 'heart_rate', entry.id, entry.toJson());
   }
 
   Future<void> addGlucose(GlucoseEntry entry) async {
     await vitalsRepo.saveGlucose(entry);
     await _refreshVitalsCache();
-    await _enqueueSync(SyncOperationType.create, 'glucose', entry.id, entry.toJson());
   }
 
   // Reminders
@@ -470,8 +450,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
         _allRecords[index] = updated;
         _refreshInsights();
         notifyListeners();
-        await _persistRecords();
-        await _enqueueSync(SyncOperationType.delete, 'medical_record', id, {});
+        await recordRepo.deleteRecord(id);
     }
   }
 
@@ -482,9 +461,8 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
        snapshot = snapshot.copyWith(sleepHours: snapshot.sleepHours + entry.durationHours);
     }
     notifyListeners();
-    await _persistSleep();
+    await sleepRepo.saveSleepLog(entry);
     await _persistSnapshot();
-    await _enqueueSync(SyncOperationType.create, 'sleep', entry.id, entry.toJson());
   }
 
   Future<void> deleteSleepLog(String id) async {
@@ -503,9 +481,8 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
        _allSleepLogs[index] = updated;
        
        notifyListeners();
-       await _persistSleep();
+       await sleepRepo.deleteSleepLog(id);
        await _persistSnapshot();
-       await _enqueueSync(SyncOperationType.delete, 'sleep', id, {});
     }
   }
 
@@ -515,7 +492,6 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     await _persistProfile();
     await _persistSnapshot();
-    await _enqueueSync(SyncOperationType.update, 'profile', 'user_profile', profile.toJson());
   }
 
   Future<void> clearAll() async {
@@ -531,7 +507,7 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
      hrHistory.clear();
      glucoseHistory.clear();
      doseLogs.clear();
-     _generatedInsights.clear(); // Clear insights
+     _generatedInsights.clear();
      
      snapshot = HealthSnapshot.empty();
      
@@ -548,70 +524,41 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
           _persistSnapshot(),
           _persistProfile(),
           _persistReminders(),
-          _persistRecords(),
-          _persistMeals(),
-          _persistActivities(),
-          _persistSleep(),
+          // Others handled by repos now
       ]);
   }
 
   Future<void> _persistSnapshot() async => _save(_snapshotKey, snapshot.toJson());
   Future<void> _persistProfile() async => _save(_profileKey, userProfile.toJson());
   Future<void> _persistReminders() async => _saveList(_remindersKey, reminders);
-  Future<void> _persistRecords() async => _saveList(_recordsKey, _allRecords);
-  Future<void> _persistMeals() async => _saveList(_mealsKey, _allMeals);
-  Future<void> _persistActivities() async => _saveList(_activitiesKey, _allActivities);
-  Future<void> _persistSleep() async => _saveList(_sleepKey, _allSleepLogs);
 
   Future<void> _save(String key, dynamic json) async {
       final prefs = await SharedPreferences.getInstance();
       final str = jsonEncode(json);
-      final enc = await secureSerializer.encryptString(str);
-      await prefs.setString(key, enc);
+      await prefs.setString(key, str);
   }
 
   Future<void> _saveList(String key, List<dynamic> list) async {
       final prefs = await SharedPreferences.getInstance();
       final str = jsonEncode(list.map((e) => e.toJson()).toList());
-      final enc = await secureSerializer.encryptString(str);
-      await prefs.setString(key, enc);
-  }
-
-  Future<void> _enqueueSync(SyncOperationType type, String feature, String id, Map<String, dynamic> payload, {SyncPriority priority = SyncPriority.normal}) async {
-    try {
-        await syncQueue.enqueue(
-          SyncOperation(
-              id: DateTime.now().microsecondsSinceEpoch.toString(), // Unique op ID
-              type: type,
-              entityTable: feature,
-              entityId: id,
-              payload: payload,
-              priority: priority,
-              timestamp: DateTime.now().toUtc(),
-          )
-        );
-        // Trigger sync immediately if critical or network valid
-        syncService.triggerSync();
-    } catch (e) {
-        HealthLog.e('LifeTrackStore', 'SyncEnqueue', 'Failed to enqueue sync op', error: e);
-    }
+      await prefs.setString(key, str);
   }
 
 
   // --- Search Methods ---
-  List<DiseaseInfo> searchDiseases(String query) {
+  List<Disease> searchDiseases(String query) {
     if (query.isEmpty) return [];
     final q = query.toLowerCase();
-    return diseaseGuide.where((d) => 
-      d.name.toLowerCase().contains(q) || d.symptoms.toLowerCase().contains(q)
+    return _diseaseLibrary.where((d) => 
+      d.name.toLowerCase().contains(q) || d.desc.toLowerCase().contains(q)
     ).toList();
   }
 
-  List<Scientist> searchScientists(String query) {
+  List<edu.Scientist> searchScientists(String query) {
     if (query.isEmpty) return [];
     final q = query.toLowerCase();
-    return scientists.where((s) => 
-      s.name.toLowerCase().contains(q) || s.contribution.toLowerCase().contains(q)
+    return _scientistLibrary.where((s) => 
+      s.name.toLowerCase().contains(q) || s.domain.toLowerCase().contains(q) || s.fact.toLowerCase().contains(q)
     ).toList();
   }
 
@@ -630,7 +577,6 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
       bpHistory.removeWhere((e) => e.id == id); 
       _refreshInsights();
       notifyListeners();
-      await _enqueueSync(SyncOperationType.delete, 'blood_pressure', id, {});
   }
 
   Future<void> deleteHeartRate(String id) async {
@@ -638,7 +584,6 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
       hrHistory.removeWhere((e) => e.id == id);
       _refreshInsights();
       notifyListeners();
-      await _enqueueSync(SyncOperationType.delete, 'heart_rate', id, {});
   }
 
   Future<void> deleteGlucose(String id) async {
@@ -646,7 +591,6 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
       glucoseHistory.removeWhere((e) => e.id == id);
       _refreshInsights();
       notifyListeners();
-      await _enqueueSync(SyncOperationType.delete, 'glucose', id, {});
   }
 
   Future<void> deleteWeight(DateTime date) async {
@@ -654,14 +598,12 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
       weightHistory.removeWhere((e) => _isSameDay(e.date, date)); 
       _refreshInsights();
       notifyListeners();
-      await _enqueueSync(SyncOperationType.delete, 'weight', date.toIso8601String(), {});
   }
 
   Future<void> deleteDoseLog(String id) async {
       await medicationRepo.deleteDoseLog(id);
       doseLogs.removeWhere((d) => d.id == id);
       notifyListeners();
-      await _enqueueSync(SyncOperationType.delete, 'dose_log', id, {});
   }
   
   bool _isSameDay(DateTime a, DateTime b) {
@@ -727,8 +669,6 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
     final doses = await medicationRepo.getDoseLogs();
     for (var d in doses) {
         if (d.deletedAt == null && !governanceService.shouldRetain(d.createdAt, 'medical_record')) {
-            await deleteDoseLog(d.id); 
-            // ... (comments retained/simplified)
             await medicationRepo.deleteDoseLog(d.id);
         }
     }
@@ -760,7 +700,6 @@ class LifeTrackStore extends ChangeNotifier with WidgetsBindingObserver {
         'reminders': reminders.map((e) => e.toJson()).toList(),
      };
      
-     final policy = ExportPolicy(scope: ExportScope.full);
-     return await governanceService.exportData(raw, policy: policy);
+     return await governanceService.exportData(raw);
   }
 }

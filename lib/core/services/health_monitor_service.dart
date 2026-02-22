@@ -20,12 +20,3 @@ class HealthMonitorService {
   }
 }
 
-class TelemetryService {
-  Future<void> logMetric(String name, int value) async {
-    // TODO: Buffer and send to telemetry endpoint (privacy preserving)
-  }
-  
-  Future<void> logError(Object error, StackTrace stack) async {
-    // TODO: Send crash report
-  }
-}

@@ -1,28 +1,23 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:lifetrack/data/models/disease_info.dart';
+import 'package:lifetrack/domain/education/models/disease.dart';
+import 'package:lifetrack/domain/education/repositories/education_repository.dart';
 
 class DiseaseService {
-  Future<DiseaseInfo?> fetchDiseaseFromWiki(String query) async {
+  final EducationRepository _educationRepo;
+
+  DiseaseService(this._educationRepo);
+
+  Future<Disease?> fetchDiseaseLocal(String query) async {
     try {
-      final Uri url = Uri.parse('https://en.wikipedia.org/api/rest_v1/page/summary/$query');
-      final http.Response response = await http.get(url);
-      if (response.statusCode == 200) {
-        final dynamic json = jsonDecode(response.body);
-        return DiseaseInfo(
-          name: json['title'] as String,
-          symptoms: json['description'] as String? ?? 'No description available.',
-          precautions: json['extract'] as String? ?? 'No details available.',
-          prevention: 'Consult a doctor for prevention strategies.',
-          cure: 'Consult a doctor for treatment.',
-          isApiResult: true,
-          thumbnailUrl: json['thumbnail']?['source'] as String?,
-        );
-      }
+      final diseases = await _educationRepo.loadDiseases();
+      final q = query.toLowerCase();
+      
+      // Find exact or partial match
+      return diseases.firstWhere(
+        (d) => d.name.toLowerCase().contains(q),
+        orElse: () => diseases.first, // Fallback to first one or handle differently
+      );
     } catch (e) {
-      debugPrint('Error fetching disease info: $e');
+      return null;
     }
-    return null;
   }
 }

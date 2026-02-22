@@ -1,32 +1,25 @@
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:xml/xml.dart';
+import 'package:lifetrack/domain/education/models/research_item.dart';
+import 'package:lifetrack/domain/education/repositories/education_repository.dart';
 import 'package:lifetrack/data/models/content/news_item.dart';
 
 class NewsService {
-  // ScienceDaily Medical Technology RSS
-  static const String _feedUrl = 'https://www.sciencedaily.com/rss/health_medicine/medical_technology.xml';
+  final EducationRepository _educationRepo;
+
+  NewsService(this._educationRepo);
 
   Future<List<NewsItem>> fetchNews() async {
     try {
-      final http.Response response = await http.get(Uri.parse(_feedUrl));
-      if (response.statusCode == 200) {
-        final XmlDocument document = XmlDocument.parse(response.body);
-        final Iterable<XmlElement> items = document.findAllElements('item');
-        return items.map((XmlElement node) {
-          return NewsItem(
-            title: node.findElements('title').single.innerText,
-            link: node.findElements('link').single.innerText,
-            date: DateTime.tryParse(node.findElements('pubDate').single.innerText) ?? DateTime.now(),
-            summary: node.findElements('description').single.innerText.replaceAll(RegExp(r'<[^>]*>'), ''),
-            source: 'ScienceDaily',
-             id: node.findElements('guid').isNotEmpty ? node.findElements('guid').single.innerText : node.findElements('link').single.innerText,
-          );
-        }).toList();
-      }
+      final research = await _educationRepo.loadResearch();
+      return research.map((r) => NewsItem(
+        id: r.id,
+        title: r.title,
+        summary: r.summary,
+        date: DateTime.now(), // Local content date
+        source: r.source,
+        link: r.link,
+      )).toList();
     } catch (e) {
-      debugPrint('Error fetching news: $e');
+      return <NewsItem>[];
     }
-    return <NewsItem>[];
   }
 }

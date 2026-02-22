@@ -1,46 +1,40 @@
 import 'package:lifetrack/core/services/health_log.dart';
-import 'package:lifetrack/core/services/governance/retention_policy.dart';
-import 'package:lifetrack/core/services/governance/export_policy.dart';
-import 'package:lifetrack/core/services/governance/anonymization_policy.dart';
 
-/// Service responsible for enforcing data governance policies.
-/// Delegates core logic to specific Policy objects.
+/// Service responsible for enforcing data governance policies locally.
 class DataGovernanceService {
-  RetentionPolicy _retentionPolicy;
-  final AnonymizationPolicy _anonymizationPolicy;
+  int _retentionDays;
 
   DataGovernanceService({
-    RetentionPolicy? retentionPolicy,
-    AnonymizationPolicy? anonymizationPolicy,
-  })  : _retentionPolicy = retentionPolicy ?? RetentionPolicy(),
-        _anonymizationPolicy = anonymizationPolicy ?? AnonymizationPolicy();
+    int retentionDays = 365, // Default 1 year
+  }) : _retentionDays = retentionDays;
 
   /// Updates the current retention policy (e.g., from Settings)
-  void updateRetentionPolicy(RetentionPolicy newPolicy) {
-    _retentionPolicy = newPolicy;
-    HealthLog.i('DataGovernance', 'PolicyUpdate', 'Retention policy updated: ${_retentionPolicy.policyDescription}');
+  void updateRetentionPolicy(int days) {
+    _retentionDays = days;
+    HealthLog.i('DataGovernance', 'PolicyUpdate', 'Retention policy updated to $days days');
   }
 
   /// Checks if data should be retained based on its timestamp and type.
-  bool shouldRetain(DateTime createdAt, String dataType) {
-    return _retentionPolicy.shouldCheck(createdAt, dataType);
+  bool shouldCheck(DateTime createdAt, String dataType) {
+    final now = DateTime.now();
+    final difference = now.difference(createdAt).inDays;
+    return difference <= _retentionDays;
   }
 
-  /// Exports data applying the specified export policy.
-  Future<Map<String, dynamic>> exportData(Map<String, dynamic> rawData, {required ExportPolicy policy}) async {
-    HealthLog.audit('DataGovernance', 'Export', 'Data export initiated', userId: 'current_user', details: {'scope': policy.scope.toString()});
+  /// Alias for compatibility with LifeTrackStore calls
+  bool shouldRetain(DateTime createdAt, String dataType) => shouldCheck(createdAt, dataType);
+
+  /// Exports data in a simple JSON format.
+  Future<Map<String, dynamic>> exportData(Map<String, dynamic> rawData) async {
+    HealthLog.audit('DataGovernance', 'Export', 'Data export initiated', userId: 'user');
     
-    // Inject the service's anonymization policy if the export policy requests one but doesn't have it set
-    // This allows global anonymization rules to apply if not overridden
-    if (policy.anonymizationPolicy == null && _anonymizationPolicy.hashCode != 0) { // check existence
-       // In a real app we might merge them, for now just use the passed one or default instructions
-    }
+    // Add simple metadata
+    final result = Map<String, dynamic>.from(rawData);
+    result['export_metadata'] = {
+      'generated_at': DateTime.now().toUtc().toIso8601String(),
+      'version': '1.0.0',
+    };
 
-    return policy.process(rawData);
-  }
-  
-  // Expose anonymization for direct use if needed
-  Map<String, dynamic> anonymize(Map<String, dynamic> data) {
-    return _anonymizationPolicy.sanitize(data);
+    return result;
   }
 }
